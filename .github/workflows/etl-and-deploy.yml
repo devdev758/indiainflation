@@ -1,0 +1,158 @@
+name: ETL and Deploy
+
+on:
+  schedule:
+    - cron: "0 2 * * *"
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+
+jobs:
+  etl-schedule:
+    if: github.event_name != 'push'
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_DB: indiainflation
+          POSTGRES_PASSWORD: password
+          POSTGRES_USER: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres" --health-interval 10s --health-timeout 5s --health-retries 5
+    env:
+      DATABASE_URL: postgresql+psycopg://postgres:password@localhost:5432/indiainflation
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install ETL requirements
+        run: pip install -r etl/requirements.txt
+
+      - name: Dry run parse
+        run: python -m etl.fetch_mospi file://$PWD/etl/tests/fixtures/sample_annex.xlsx --dry-run
+
+      - name: Apply migrations
+        run: psql "$DATABASE_URL" -f db/migrations/0001_initial.sql
+
+      - name: Seed database
+        run: psql "$DATABASE_URL" -f db/seed/sample_seed.sql
+
+      - name: Full ETL
+        run: python -m etl.fetch_mospi file://$PWD/etl/tests/fixtures/sample_annex.xlsx --database-url "$DATABASE_URL"
+
+      - name: Export JSON artifacts
+        run: python -m etl.export_json --database-url "$DATABASE_URL"
+
+      - name: Upload exports
+        uses: actions/upload-artifact@v4
+        with:
+          name: cpi-exports
+          path: etl/data/exports
+
+      - name: Slack notification
+        if: failure() && env.SLACK_WEBHOOK != ''
+        env:
+          SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK }}
+        run: |
+          curl -X POST -H 'Content-type: application/json' --data '{"text":":rotating_light: ETL run failed"}' "$SLACK_WEBHOOK"
+
+  build-and-deploy:
+    if: github.event_name == 'push'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    env:
+      REGISTRY: ghcr.io
+      IMAGE_NAME_WEB: indiainflation-web
+      IMAGE_NAME_ETL: indiainflation-etl
+      NODE_ENV: production
+      DATABASE_URL: postgresql+psycopg://postgres:password@localhost:5432/indiainflation
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_DB: indiainflation
+          POSTGRES_PASSWORD: password
+          POSTGRES_USER: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres" --health-interval 10s --health-timeout 5s --health-retries 5
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+
+      - name: Install web dependencies
+        run: npm install --force
+        working-directory: web
+
+      - name: Run web lint
+        run: npm run lint
+        working-directory: web
+
+      - name: Run web tests
+        run: npm test
+        working-directory: web
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install ETL requirements
+        run: pip install -r etl/requirements.txt
+
+      - name: Apply migrations
+        run: psql "$DATABASE_URL" -f db/migrations/0001_initial.sql
+
+      - name: Run pytest
+        run: pytest
+        working-directory: etl
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push web image
+        uses: docker/build-push-action@v5
+        with:
+          context: ./web
+          push: true
+          tags: ${{ env.REGISTRY }}/${{ github.repository }}:${{ env.IMAGE_NAME_WEB }}-${{ github.sha }}
+
+      - name: Build and push ETL image
+        uses: docker/build-push-action@v5
+        with:
+          context: ./etl
+          push: true
+          tags: ${{ env.REGISTRY }}/${{ github.repository }}:${{ env.IMAGE_NAME_ETL }}-${{ github.sha }}
+
+      - name: Deploy to Hetzner
+        if: ${{ secrets.HETZNER_HOST != '' && secrets.HETZNER_SSH_KEY != '' }}
+        env:
+          HETZNER_HOST: ${{ secrets.HETZNER_HOST }}
+          SSH_KEY_PATH: ${{ runner.temp }}/hetzner_key
+          WEB_IMAGE: ${{ env.REGISTRY }}/${{ github.repository }}:${{ env.IMAGE_NAME_WEB }}-${{ github.sha }}
+          ETL_IMAGE: ${{ env.REGISTRY }}/${{ github.repository }}:${{ env.IMAGE_NAME_ETL }}-${{ github.sha }}
+        run: |
+          echo "${{ secrets.HETZNER_SSH_KEY }}" > "$SSH_KEY_PATH"
+          chmod 600 "$SSH_KEY_PATH"
+          ./infra/deploy.sh
