@@ -1,12 +1,12 @@
-name: CI Deploy
+name: CI Deploy (refresh)
 
 on:
   workflow_dispatch:
     inputs:
       run_tests:
-        description: "Run npm tests before building the image"
+        description: "Run tests before deploy"
         required: false
-        default: 'true'
+        default: "false"
   push:
     branches:
       - main
