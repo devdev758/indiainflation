@@ -6,7 +6,7 @@ on:
       run_tests:
         description: "Run npm tests before building the image"
         required: false
-        default: "true"
+        default: 'true'
   push:
     branches:
       - main
