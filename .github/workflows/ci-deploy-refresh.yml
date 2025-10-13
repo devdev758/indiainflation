@@ -20,7 +20,7 @@ jobs:
     env:
       REGISTRY: ghcr.io
       IMAGE_NAME: ${{ github.repository_owner }}/indiainflation-web
-      IMAGE_TAG: ghcr.io/${{ github.repository_owner }}/indiainflation-web:${{ github.sha }}
+      IMAGE_TAG: ghcr.io/${{ github.repository_owner }}/indiainflation-web:latest
       REMOTE_HOST: deploy@188.245.150.69
     steps:
       - name: Checkout
@@ -85,11 +85,7 @@ jobs:
           password: ${{ secrets.GHCR_PAT || secrets.GITHUB_TOKEN }}
 
       - name: Build web image
-        run: |
-          docker build \
-            --file web/Dockerfile \
-            --tag "${IMAGE_TAG}" \
-            .
+        run: docker build -t ghcr.io/${{ github.repository_owner }}/indiainflation-web:latest -f web/Dockerfile ./web
 
       - name: Push web image
         run: docker push "${IMAGE_TAG}"
@@ -124,15 +120,15 @@ jobs:
           set -euo pipefail
           tmp_env="$(mktemp)"
           chmod 600 "$tmp_env"
-          cat <<'EOF' > "$tmp_env"
-          DATABASE_URL=${DB_URL}
-          MINIO_ACCESS_KEY=${MINIO_ACCESS_KEY}
-          MINIO_SECRET_KEY=${MINIO_SECRET_KEY}
-          MINIO_BUCKET=${MINIO_BUCKET}
-          MINIO_ENDPOINT=${MINIO_ENDPOINT}
-          WORDPRESS_DB_PASSWORD=${WP_DB_PASSWORD}
-          WEBHOOK_SECRET=${WEBHOOK_SECRET}
-          EOF
+          {
+            printf 'DATABASE_URL=%s\n' "$DB_URL"
+            printf 'MINIO_ACCESS_KEY=%s\n' "$MINIO_ACCESS_KEY"
+            printf 'MINIO_SECRET_KEY=%s\n' "$MINIO_SECRET_KEY"
+            printf 'MINIO_BUCKET=%s\n' "$MINIO_BUCKET"
+            printf 'MINIO_ENDPOINT=%s\n' "$MINIO_ENDPOINT"
+            printf 'WORDPRESS_DB_PASSWORD=%s\n' "$WP_DB_PASSWORD"
+            printf 'WEBHOOK_SECRET=%s\n' "$WEBHOOK_SECRET"
+          } > "$tmp_env"
           echo "path=$tmp_env" >> "$GITHUB_OUTPUT"
 
 
