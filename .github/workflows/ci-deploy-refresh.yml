@@ -85,7 +85,7 @@ jobs:
           password: ${{ secrets.GHCR_PAT || secrets.GITHUB_TOKEN }}
 
       - name: Build web image
-        run: docker build -t ghcr.io/${{ github.repository_owner }}/indiainflation-web:latest -f web/Dockerfile ./web
+        run: docker build --no-cache -t ghcr.io/${{ github.repository_owner }}/indiainflation-web:latest -f web/Dockerfile ./web
 
       - name: Push web image
         run: docker push "${IMAGE_TAG}"
