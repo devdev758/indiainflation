@@ -1,0 +1,163 @@
+name: CI Deploy
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+    inputs:
+      run_tests:
+        description: "Run npm tests before building the image"
+        type: boolean
+        default: true
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    env:
+      REGISTRY: ghcr.io
+      IMAGE_NAME: ${{ github.repository_owner }}/indiainflation-web
+      IMAGE_TAG: ghcr.io/${{ github.repository_owner }}/indiainflation-web:${{ github.sha }}
+      REMOTE_HOST: deploy@188.245.150.69
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Determine test execution
+        id: tests
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ] && [ "${{ github.event.inputs.run_tests }}" = "false" ]; then
+            echo "run_tests=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "run_tests=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Use Node.js 20
+        if: steps.tests.outputs.run_tests == 'true'
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+
+      - name: Install dependencies and run tests
+        if: steps.tests.outputs.run_tests == 'true'
+        working-directory: web
+        run: npm ci && npm test
+
+      - name: Check required secrets
+        env:
+          DEPLOY_KEY: ${{ secrets.DEPLOY_SSH_PRIVATE_KEY }}
+          DB_URL: ${{ secrets.INDIAINFLATION_DATABASE_URL }}
+          MINIO_ACCESS_KEY: ${{ secrets.INDIAINFLATION_MINIO_ACCESS_KEY }}
+          MINIO_SECRET_KEY: ${{ secrets.INDIAINFLATION_MINIO_SECRET_KEY }}
+          MINIO_BUCKET: ${{ secrets.INDIAINFLATION_MINIO_BUCKET }}
+          MINIO_ENDPOINT: ${{ secrets.INDIAINFLATION_MINIO_ENDPOINT }}
+          WP_DB_PASSWORD: ${{ secrets.INDIAINFLATION_WORDPRESS_DB_PASSWORD }}
+          WEBHOOK_SECRET: ${{ secrets.WEBHOOK_SECRET }}
+        run: |
+          set -euo pipefail
+          missing=""
+          [ -n "$DEPLOY_KEY" ] || missing="$missing DEPLOY_SSH_PRIVATE_KEY"
+          [ -n "$DB_URL" ] || missing="$missing INDIAINFLATION_DATABASE_URL"
+          [ -n "$MINIO_ACCESS_KEY" ] || missing="$missing INDIAINFLATION_MINIO_ACCESS_KEY"
+          [ -n "$MINIO_SECRET_KEY" ] || missing="$missing INDIAINFLATION_MINIO_SECRET_KEY"
+          [ -n "$MINIO_BUCKET" ] || missing="$missing INDIAINFLATION_MINIO_BUCKET"
+          [ -n "$MINIO_ENDPOINT" ] || missing="$missing INDIAINFLATION_MINIO_ENDPOINT"
+          [ -n "$WP_DB_PASSWORD" ] || missing="$missing INDIAINFLATION_WORDPRESS_DB_PASSWORD"
+          [ -n "$WEBHOOK_SECRET" ] || missing="$missing WEBHOOK_SECRET"
+
+          if [ -n "$missing" ]; then
+            echo "Missing required secrets:$missing" >&2
+            echo "Add them under Settings > Secrets and variables > Actions before re-running this workflow." >&2
+            echo "Ensure DEPLOY_SSH_PRIVATE_KEY contains the private key authorised for deploy@188.245.150.69." >&2
+            exit 1
+          fi
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GHCR_PAT || secrets.GITHUB_TOKEN }}
+
+      - name: Build web image
+        run: |
+          docker build \
+            --file web/Dockerfile \
+            --tag "${IMAGE_TAG}" \
+            .
+
+      - name: Push web image
+        run: docker push "${IMAGE_TAG}"
+
+      - name: Prepare deployment metadata
+        id: deploy-vars
+        run: |
+          remote_env="/home/deploy/repo/infra/.env.ci.${{ github.run_id }}.${{ github.run_attempt }}"
+          echo "remote_env=$remote_env" >> "$GITHUB_OUTPUT"
+
+      - name: Start SSH agent
+        uses: webfactory/ssh-agent@v0.9.0
+        with:
+          ssh-private-key: ${{ secrets.DEPLOY_SSH_PRIVATE_KEY }}
+
+      - name: Add server to known hosts
+        run: |
+          mkdir -p ~/.ssh
+          ssh-keyscan -H 188.245.150.69 >> ~/.ssh/known_hosts
+
+      - name: Create deployment env file
+        id: envfile
+        env:
+          DB_URL: ${{ secrets.INDIAINFLATION_DATABASE_URL }}
+          MINIO_ACCESS_KEY: ${{ secrets.INDIAINFLATION_MINIO_ACCESS_KEY }}
+          MINIO_SECRET_KEY: ${{ secrets.INDIAINFLATION_MINIO_SECRET_KEY }}
+          MINIO_BUCKET: ${{ secrets.INDIAINFLATION_MINIO_BUCKET }}
+          MINIO_ENDPOINT: ${{ secrets.INDIAINFLATION_MINIO_ENDPOINT }}
+          WP_DB_PASSWORD: ${{ secrets.INDIAINFLATION_WORDPRESS_DB_PASSWORD }}
+          WEBHOOK_SECRET: ${{ secrets.WEBHOOK_SECRET }}
+        run: |
+          set -euo pipefail
+          tmp_env="$(mktemp)"
+          chmod 600 "$tmp_env"
+          cat <<EOF > "$tmp_env"
+DATABASE_URL=${DB_URL}
+MINIO_ACCESS_KEY=${MINIO_ACCESS_KEY}
+MINIO_SECRET_KEY=${MINIO_SECRET_KEY}
+MINIO_BUCKET=${MINIO_BUCKET}
+MINIO_ENDPOINT=${MINIO_ENDPOINT}
+WORDPRESS_DB_PASSWORD=${WP_DB_PASSWORD}
+WEBHOOK_SECRET=${WEBHOOK_SECRET}
+EOF
+          echo "path=$tmp_env" >> "$GITHUB_OUTPUT"
+
+      - name: Upload env file
+        env:
+          LOCAL_ENV: ${{ steps.envfile.outputs.path }}
+          REMOTE_ENV: ${{ steps.deploy-vars.outputs.remote_env }}
+          REMOTE_HOST: ${{ env.REMOTE_HOST }}
+        run: |
+          set -euo pipefail
+          scp -o StrictHostKeyChecking=yes "$LOCAL_ENV" "$REMOTE_HOST:$REMOTE_ENV"
+          ssh "$REMOTE_HOST" "chmod 600 $REMOTE_ENV"
+
+      - name: Deploy to staging
+        env:
+          REMOTE_ENV: ${{ steps.deploy-vars.outputs.remote_env }}
+          IMAGE_TAG: ${{ env.IMAGE_TAG }}
+          REMOTE_HOST: ${{ env.REMOTE_HOST }}
+        run: |
+          set -euo pipefail
+          ssh "$REMOTE_HOST" \
+            "/home/deploy/repo/scripts/ci_deploy.sh $REMOTE_ENV $IMAGE_TAG"
+
+      - name: Remove local temp env file
+        if: ${{ always() && steps.envfile.outputs.path != '' }}
+        env:
+          LOCAL_ENV: ${{ steps.envfile.outputs.path }}
+        run: |
+          rm -f "$LOCAL_ENV"
