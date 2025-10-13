@@ -8,8 +8,8 @@ on:
     inputs:
       run_tests:
         description: "Run npm tests before building the image"
-        type: boolean
-        default: true
+        required: false
+        default: "true"
 
 jobs:
   build-and-deploy:
