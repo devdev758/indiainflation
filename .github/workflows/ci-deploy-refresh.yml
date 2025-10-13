@@ -124,16 +124,17 @@ jobs:
           set -euo pipefail
           tmp_env="$(mktemp)"
           chmod 600 "$tmp_env"
-          cat <<EOF > "$tmp_env"
-DATABASE_URL=${DB_URL}
-MINIO_ACCESS_KEY=${MINIO_ACCESS_KEY}
-MINIO_SECRET_KEY=${MINIO_SECRET_KEY}
-MINIO_BUCKET=${MINIO_BUCKET}
-MINIO_ENDPOINT=${MINIO_ENDPOINT}
-WORDPRESS_DB_PASSWORD=${WP_DB_PASSWORD}
-WEBHOOK_SECRET=${WEBHOOK_SECRET}
-EOF
+          cat <<'EOF' > "$tmp_env"
+          DATABASE_URL=${DB_URL}
+          MINIO_ACCESS_KEY=${MINIO_ACCESS_KEY}
+          MINIO_SECRET_KEY=${MINIO_SECRET_KEY}
+          MINIO_BUCKET=${MINIO_BUCKET}
+          MINIO_ENDPOINT=${MINIO_ENDPOINT}
+          WORDPRESS_DB_PASSWORD=${WP_DB_PASSWORD}
+          WEBHOOK_SECRET=${WEBHOOK_SECRET}
+          EOF
           echo "path=$tmp_env" >> "$GITHUB_OUTPUT"
+
 
       - name: Upload env file
         env:
