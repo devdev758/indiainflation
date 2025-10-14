@@ -64,6 +64,58 @@ jobs:
         run: |
           curl -X POST -H 'Content-type: application/json' --data '{"text":":rotating_light: ETL run failed"}' "$SLACK_WEBHOOK"
 
+  search-indexer-smoke-test:
+    needs: etl-schedule
+    if: ${{ env.ENABLE_TYPESENSE_SMOKE == 'true' }}
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_DB: indiainflation
+          POSTGRES_PASSWORD: password
+          POSTGRES_USER: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres" --health-interval 10s --health-timeout 5s --health-retries 5
+      typesense:
+        image: typesense/typesense:0.25.1
+        env:
+          TYPESENSE_API_KEY: search-key
+          TYPESENSE_DATA_DIR: /typesense/data
+        command: >-
+          typesense-server --api-key=search-key --data-dir=/typesense/data --listen-port=8108 --enable-cors=true
+        ports:
+          - 8108:8108
+        options: >-
+          --health-cmd "curl -f http://localhost:8108/health" --health-interval 10s --health-timeout 5s --health-retries 5
+    env:
+      DATABASE_URL: postgresql://postgres:password@localhost:5432/indiainflation
+      TYPESENSE_HOST: http://localhost:8108
+      TYPESENSE_API_KEY: search-key
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install ETL requirements
+        run: pip install -r etl/requirements.txt
+
+      - name: Apply migrations
+        run: |
+          psql "$DATABASE_URL" -f db/migrations/0001_initial.sql
+          psql "$DATABASE_URL" -f db/migrations/0002_search_indexes.sql
+
+      - name: Seed database
+        run: psql "$DATABASE_URL" -f db/seed/sample_seed.sql
+
+      - name: Search indexer dry run
+        run: python etl/typesense_indexer.py --all --dry-run
+
   build-and-deploy:
     if: github.event_name == 'push'
     runs-on: ubuntu-latest
@@ -146,7 +198,7 @@ jobs:
           tags: ${{ env.REGISTRY }}/${{ github.repository }}:${{ env.IMAGE_NAME_ETL }}-${{ github.sha }}
 
       - name: Deploy to Hetzner
-        if: ${{ secrets.HETZNER_HOST != '' && secrets.HETZNER_SSH_KEY != '' }}
+        if: ${{ secrets.HETZNER_HOST && secrets.HETZNER_SSH_KEY }}
         env:
           HETZNER_HOST: ${{ secrets.HETZNER_HOST }}
           SSH_KEY_PATH: ${{ runner.temp }}/hetzner_key
