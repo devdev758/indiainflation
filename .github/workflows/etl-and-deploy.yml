@@ -8,6 +8,9 @@ on:
     branches:
       - main
 
+env:
+  ENABLE_TYPESENSE_SMOKE: "false"
+
 jobs:
   etl-schedule:
     if: github.event_name != 'push'
@@ -25,7 +28,6 @@ jobs:
           --health-cmd "pg_isready -U postgres" --health-interval 10s --health-timeout 5s --health-retries 5
     env:
       DATABASE_URL: postgresql+psycopg://postgres:password@localhost:5432/indiainflation
-      ENABLE_TYPESENSE_SMOKE: "false"
     steps:
       - uses: actions/checkout@v4
 
@@ -67,7 +69,6 @@ jobs:
 
   search-indexer-smoke-test:
     needs: etl-schedule
-    if: ${{ env.ENABLE_TYPESENSE_SMOKE == 'true' }}
     runs-on: ubuntu-latest
     services:
       postgres:
@@ -113,7 +114,8 @@ jobs:
       - name: Seed database
         run: psql "$DATABASE_URL" -f db/seed/sample_seed.sql
 
-      - name: Search indexer dry run
+      - name: Run Typesense smoke test
+        if: ${{ env.ENABLE_TYPESENSE_SMOKE == 'true' }}
         run: python etl/typesense_indexer.py --all --dry-run
 
   build-and-deploy:
@@ -188,22 +190,22 @@ jobs:
         with:
           context: ./web
           push: true
-          tags: ${{ env.REGISTRY }}/${{ github.repository }}:${{ env.IMAGE_NAME_WEB }}-${{ github.sha }}
+          tags: ${{ env.REGISTRY }}/${{ github.repository_owner }}/indiainflation-web:latest
 
       - name: Build and push ETL image
         uses: docker/build-push-action@v5
         with:
           context: ./etl
           push: true
-          tags: ${{ env.REGISTRY }}/${{ github.repository }}:${{ env.IMAGE_NAME_ETL }}-${{ github.sha }}
+          tags: ${{ env.REGISTRY }}/${{ github.repository_owner }}/indiainflation-etl:latest
 
       - name: Deploy to Hetzner
-        if: ${{ (secrets.HETZNER_HOST != '') && (secrets.HETZNER_SSH_KEY != '') }}
+        if: ${{ secrets.HETZNER_HOST != '' && secrets.HETZNER_SSH_KEY != '' }}
         env:
           HETZNER_HOST: ${{ secrets.HETZNER_HOST }}
           SSH_KEY_PATH: ${{ runner.temp }}/hetzner_key
-          WEB_IMAGE: ${{ env.REGISTRY }}/${{ github.repository }}:${{ env.IMAGE_NAME_WEB }}-${{ github.sha }}
-          ETL_IMAGE: ${{ env.REGISTRY }}/${{ github.repository }}:${{ env.IMAGE_NAME_ETL }}-${{ github.sha }}
+          WEB_IMAGE: ${{ env.REGISTRY }}/${{ github.repository_owner }}/indiainflation-web:latest
+          ETL_IMAGE: ${{ env.REGISTRY }}/${{ github.repository_owner }}/indiainflation-etl:latest
         run: |
           echo "${{ secrets.HETZNER_SSH_KEY }}" > "$SSH_KEY_PATH"
           chmod 600 "$SSH_KEY_PATH"
