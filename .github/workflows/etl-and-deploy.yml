@@ -10,6 +10,7 @@ on:
 
 env:
   ENABLE_TYPESENSE_SMOKE: "false"
+  POSTGRES_PASSWORD: password
 
 jobs:
   etl-schedule:
@@ -27,7 +28,7 @@ jobs:
         options: >-
           --health-cmd "pg_isready -U postgres" --health-interval 10s --health-timeout 5s --health-retries 5
     env:
-      DATABASE_URL: postgresql+psycopg://postgres:password@localhost:5432/indiainflation
+      DATABASE_URL: postgresql+psycopg://postgres:${{ env.POSTGRES_PASSWORD }}@postgres:5432/indiainflation
     steps:
       - uses: actions/checkout@v4
 
@@ -92,7 +93,7 @@ jobs:
         ports:
           - 8108:8108
     env:
-      DATABASE_URL: postgresql://postgres:password@localhost:5432/indiainflation
+      DATABASE_URL: postgresql://postgres:${{ env.POSTGRES_PASSWORD }}@postgres:5432/indiainflation
       TYPESENSE_HOST: http://localhost:8108
       TYPESENSE_API_KEY: search-key
     steps:
@@ -129,7 +130,7 @@ jobs:
       IMAGE_NAME_WEB: indiainflation-web
       IMAGE_NAME_ETL: indiainflation-etl
       NODE_ENV: production
-      DATABASE_URL: postgresql+psycopg://postgres:password@localhost:5432/indiainflation
+      DATABASE_URL: postgresql+psycopg://postgres:${{ env.POSTGRES_PASSWORD }}@postgres:5432/indiainflation
     services:
       postgres:
         image: postgres:16
