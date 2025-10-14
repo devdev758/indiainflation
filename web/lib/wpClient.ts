@@ -48,6 +48,10 @@ type CacheEntry<T> = {
 
 const cache = new Map<string, CacheEntry<unknown>>();
 
+function isWpConfigured(): boolean {
+  return Boolean(process.env.WP_API_BASE && process.env.WP_ADMIN_USER && process.env.WP_APP_PASSWORD);
+}
+
 function getEnv(name: "WP_API_BASE" | "WP_ADMIN_USER" | "WP_APP_PASSWORD") {
   const value = process.env[name];
   if (!value) {
@@ -220,25 +224,33 @@ function mapPost(raw: RawPost): PostDetail {
 }
 
 export async function fetchPosts({ per_page = 10, page = 1 }: FetchPostsArgs = {}): Promise<PostSummary[]> {
-  const posts = await wpFetch<RawPost[]>("wp/v2/posts", {
-    per_page,
-    page,
-    status: "publish",
-    _embed: "author,wp:featuredmedia,wp:term"
-  });
-  return posts.map((post) => {
-    const mapped = mapPost(post);
-    return {
-      id: mapped.id,
-      slug: mapped.slug,
-      title: mapped.title,
-      excerpt: mapped.excerpt,
-      date: mapped.date,
-      author: mapped.author,
-      featuredImage: mapped.featuredImage,
-      categories: mapped.categories
-    } satisfies PostSummary;
-  });
+  if (!isWpConfigured()) {
+    return [];
+  }
+  try {
+    const posts = await wpFetch<RawPost[]>("wp/v2/posts", {
+      per_page,
+      page,
+      status: "publish",
+      _embed: "author,wp:featuredmedia,wp:term"
+    });
+    return posts.map((post) => {
+      const mapped = mapPost(post);
+      return {
+        id: mapped.id,
+        slug: mapped.slug,
+        title: mapped.title,
+        excerpt: mapped.excerpt,
+        date: mapped.date,
+        author: mapped.author,
+        featuredImage: mapped.featuredImage,
+        categories: mapped.categories
+      } satisfies PostSummary;
+    });
+  } catch (error) {
+    console.error("fetchPosts failed", error);
+    return [];
+  }
 }
 
 export async function fetchPostBySlug(slug: string): Promise<PostDetail | null> {
@@ -246,19 +258,28 @@ export async function fetchPostBySlug(slug: string): Promise<PostDetail | null> 
     throw new Error("fetchPostBySlug requires a slug");
   }
 
-  const results = await wpFetch<RawPost[]>("wp/v2/posts", {
-    per_page: 1,
-    page: 1,
-    status: "publish",
-    slug,
-    _embed: "author,wp:featuredmedia,wp:term"
-  });
-
-  if (!results.length) {
+  if (!isWpConfigured()) {
     return null;
   }
 
-  return mapPost(results[0]);
+  try {
+    const results = await wpFetch<RawPost[]>("wp/v2/posts", {
+      per_page: 1,
+      page: 1,
+      status: "publish",
+      slug,
+      _embed: "author,wp:featuredmedia,wp:term"
+    });
+
+    if (!results.length) {
+      return null;
+    }
+
+    return mapPost(results[0]);
+  } catch (error) {
+    console.error(`fetchPostBySlug failed for ${slug}`, error);
+    return null;
+  }
 }
 
 export async function fetchRelatedPosts(options: {
@@ -271,28 +292,37 @@ export async function fetchRelatedPosts(options: {
     return [];
   }
 
-  const posts = await wpFetch<RawPost[]>("wp/v2/posts", {
-    per_page,
-    page: 1,
-    status: "publish",
-    categories: categories.join(","),
-    exclude: excludeId,
-    _embed: "author,wp:featuredmedia,wp:term"
-  });
+  if (!isWpConfigured()) {
+    return [];
+  }
 
-  return posts.map((post) => {
-    const mapped = mapPost(post);
-    return {
-      id: mapped.id,
-      slug: mapped.slug,
-      title: mapped.title,
-      excerpt: mapped.excerpt,
-      date: mapped.date,
-      author: mapped.author,
-      featuredImage: mapped.featuredImage,
-      categories: mapped.categories
-    } satisfies PostSummary;
-  });
+  try {
+    const posts = await wpFetch<RawPost[]>("wp/v2/posts", {
+      per_page,
+      page: 1,
+      status: "publish",
+      categories: categories.join(","),
+      exclude: excludeId,
+      _embed: "author,wp:featuredmedia,wp:term"
+    });
+
+    return posts.map((post) => {
+      const mapped = mapPost(post);
+      return {
+        id: mapped.id,
+        slug: mapped.slug,
+        title: mapped.title,
+        excerpt: mapped.excerpt,
+        date: mapped.date,
+        author: mapped.author,
+        featuredImage: mapped.featuredImage,
+        categories: mapped.categories
+      } satisfies PostSummary;
+    });
+  } catch (error) {
+    console.error("fetchRelatedPosts failed", error);
+    return [];
+  }
 }
 
 export function __clearWpClientCache() {
