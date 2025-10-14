@@ -200,13 +200,14 @@ jobs:
           tags: ${{ env.REGISTRY }}/${{ github.repository_owner }}/indiainflation-etl:latest
 
       - name: Deploy to Hetzner
-        if: ${{ secrets.HETZNER_HOST != '' && secrets.HETZNER_SSH_KEY != '' }}
         env:
           HETZNER_HOST: ${{ secrets.HETZNER_HOST }}
+          HETZNER_SSH_KEY: ${{ secrets.HETZNER_SSH_KEY }}
           SSH_KEY_PATH: ${{ runner.temp }}/hetzner_key
           WEB_IMAGE: ${{ env.REGISTRY }}/${{ github.repository_owner }}/indiainflation-web:latest
           ETL_IMAGE: ${{ env.REGISTRY }}/${{ github.repository_owner }}/indiainflation-etl:latest
+        if: ${{ env.HETZNER_HOST != '' && env.HETZNER_SSH_KEY != '' }}
         run: |
-          echo "${{ secrets.HETZNER_SSH_KEY }}" > "$SSH_KEY_PATH"
+          echo "$HETZNER_SSH_KEY" > "$SSH_KEY_PATH"
           chmod 600 "$SSH_KEY_PATH"
           ./infra/deploy.sh
