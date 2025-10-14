@@ -10,6 +10,9 @@ const EXPORT_DIR = path.join(process.cwd(), "etl", "data", "exports", "items");
 
 type MockResponse = ReturnType<typeof createMockResponse>;
 
+const originalS3Bucket = process.env.S3_BUCKET;
+const originalS3Endpoint = process.env.S3_ENDPOINT;
+
 function createMockResponse() {
   const res: any = {
     statusCode: 200,
@@ -47,6 +50,8 @@ describe("GET /api/exports/items/[slug]", () => {
   const filePath = path.join(EXPORT_DIR, `${slug}.json.gz`);
 
   beforeAll(() => {
+    process.env.S3_BUCKET = "";
+    process.env.S3_ENDPOINT = "";
     fs.mkdirSync(EXPORT_DIR, { recursive: true });
     const payload = {
       slug,
@@ -72,6 +77,8 @@ describe("GET /api/exports/items/[slug]", () => {
     if (fs.existsSync(filePath)) {
       fs.unlinkSync(filePath);
     }
+    process.env.S3_BUCKET = originalS3Bucket;
+    process.env.S3_ENDPOINT = originalS3Endpoint;
   });
 
   it("returns parsed JSON from the gz export", async () => {

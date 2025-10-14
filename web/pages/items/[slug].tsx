@@ -18,28 +18,83 @@ const dateFormatter = new Intl.DateTimeFormat("en-IN", {
   month: "short"
 });
 
-const FALLBACK_API_BASE = "http://localhost:3000";
+const FALLBACK_API_BASE = "http://127.0.0.1:3000";
 
 const ItemPage: NextPage<ItemPageProps> = ({ exportData }) => {
-  const { slug, name, metadata, series } = exportData;
+  const rawSlug =
+    exportData?.slug ?? (exportData as { item?: { slug?: string } })?.item?.slug ?? null;
+  const rawName =
+    exportData?.name ?? (exportData as { item?: { name?: string } })?.item?.name ?? rawSlug ?? "Unknown item";
+  const rawMetadata =
+    exportData?.metadata ??
+    (exportData as { metadata?: ItemExportData["metadata"] })?.metadata ??
+    (exportData as { item?: { metadata?: ItemExportData["metadata"] } })?.item?.metadata ??
+    null;
+  const rawSeries =
+    exportData?.series ??
+    (exportData as { series?: Array<{ date: string; index_value?: number; value?: number; index?: number }> })?.series ??
+    [];
+
+  if (!rawSlug) {
+    // Defensive guard: render soft failure instead of crashing on missing identifiers.
+    return (
+      <main className="flex min-h-screen items-center justify-center bg-slate-50">
+        <p className="rounded-lg border border-slate-200 bg-white px-6 py-4 text-slate-600 shadow">
+          Item data is unavailable at the moment.
+        </p>
+      </main>
+    );
+  }
+
+  const safeMetadata = rawMetadata ?? {
+    first_date: null,
+    last_date: null,
+    count: 0,
+    last_index_value: null,
+    average_index_value: null
+  };
+  const safeSeries = Array.isArray(rawSeries)
+    ? rawSeries.map((entry) => {
+        const candidate = entry as {
+          date: string;
+          index_value?: number;
+          value?: number;
+          index?: number;
+        };
+        const valueCandidate =
+          candidate.index_value ??
+          (typeof candidate.value === "number" ? candidate.value : undefined) ??
+          (typeof candidate.index === "number" ? candidate.index : undefined) ??
+          0;
+        return { date: candidate.date, value: valueCandidate };
+      })
+    : [];
+  const slug = rawSlug;
+  const name = rawName;
 
   const metadataCards = [
     {
       label: "First observation",
-      value: metadata.first_date ? dateFormatter.format(new Date(metadata.first_date)) : "—"
+      value: safeMetadata.first_date ? dateFormatter.format(new Date(safeMetadata.first_date)) : "—"
     },
     {
       label: "Latest observation",
-      value: metadata.last_date ? dateFormatter.format(new Date(metadata.last_date)) : "—"
+      value: safeMetadata.last_date ? dateFormatter.format(new Date(safeMetadata.last_date)) : "—"
     },
-    { label: "Points", value: metadata.count.toString() },
+    { label: "Points", value: (safeMetadata.count ?? 0).toString() },
     {
       label: "Latest index",
-      value: metadata.last_index_value !== null ? numberFormatter.format(metadata.last_index_value) : "—"
+      value:
+        safeMetadata.last_index_value !== null && safeMetadata.last_index_value !== undefined
+          ? numberFormatter.format(safeMetadata.last_index_value)
+          : "—"
     },
     {
       label: "Average index",
-      value: metadata.average_index_value !== null ? numberFormatter.format(metadata.average_index_value) : "—"
+      value:
+        safeMetadata.average_index_value !== null && safeMetadata.average_index_value !== undefined
+          ? numberFormatter.format(safeMetadata.average_index_value)
+          : "—"
     }
   ].map(({ label, value }) => (
     <div key={label} className="flex flex-col rounded border border-slate-200 p-3">
@@ -72,10 +127,7 @@ const ItemPage: NextPage<ItemPageProps> = ({ exportData }) => {
           <div className="grid gap-4 md:grid-cols-5">{metadataCards}</div>
 
           <div className="rounded-lg bg-white p-6 shadow">
-            <ItemChart
-              title={`${name} CPI Index`}
-              series={series.map((entry) => ({ date: entry.date, value: entry.index_value }))}
-            />
+            <ItemChart title={`${name} CPI Index`} series={safeSeries} />
           </div>
 
           <div className="flex flex-wrap gap-3">
@@ -106,15 +158,30 @@ const ItemPage: NextPage<ItemPageProps> = ({ exportData }) => {
 
 export default ItemPage;
 
-async function fetchExportDataViaApi(slug: string): Promise<ItemExportData | null> {
-  const configuredBase = process.env.NEXT_PUBLIC_API_BASE?.replace(/\/$/, "");
-  const bases = [...new Set([configuredBase, FALLBACK_API_BASE].filter(Boolean) as string[])];
+function resolveApiBases(): string[] {
+  const candidates = [
+    process.env.EXPORT_API_BASE,
+    process.env.CPI_API_BASE,
+    process.env.API_BASE_URL,
+    process.env.NEXT_PUBLIC_API_BASE,
+    process.env.SITE_ORIGIN,
+    process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : undefined,
+    FALLBACK_API_BASE
+  ]
+    .filter((value): value is string => typeof value === "string" && value.length > 0)
+    .map((base) => base.replace(/\/$/, ""));
 
+  return Array.from(new Set(candidates));
+}
+
+async function fetchExportDataViaApi(slug: string): Promise<ItemExportData | null> {
+  const bases = resolveApiBases();
   for (const base of bases) {
     try {
-      const response = await fetch(`${base}/api/exports/items/${slug}`);
+      const target = base.includes("/api/") ? `${base}/exports/items/${slug}` : `${base}/api/exports/items/${slug}`;
+      const response = await fetch(target);
       if (response.status === 404) {
-        return null;
+        continue;
       }
       if (!response.ok) {
         continue;
@@ -141,7 +208,7 @@ export const getStaticProps: GetStaticProps<ItemPageProps> = async ({ params }) 
   }
 
   let exportData = await fetchExportDataViaApi(slug);
-  if (!exportData) {
+  if (!exportData && process.env.NODE_ENV !== "production") {
     exportData = await loadSampleOnly(slug);
   }
 
@@ -153,6 +220,6 @@ export const getStaticProps: GetStaticProps<ItemPageProps> = async ({ params }) 
     props: {
       exportData
     },
-    revalidate: 86400
+    revalidate: 3600
   };
 };

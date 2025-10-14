@@ -115,6 +115,9 @@ jobs:
           MINIO_BUCKET: ${{ secrets.INDIAINFLATION_MINIO_BUCKET }}
           MINIO_ENDPOINT: ${{ secrets.INDIAINFLATION_MINIO_ENDPOINT }}
           WP_DB_PASSWORD: ${{ secrets.INDIAINFLATION_WORDPRESS_DB_PASSWORD }}
+          WP_API_BASE: ${{ secrets.WP_API_BASE }}
+          WP_ADMIN_USER: ${{ secrets.WP_ADMIN_USER }}
+          WP_APP_PASSWORD: ${{ secrets.WP_APP_PASSWORD }}
           WEBHOOK_SECRET: ${{ secrets.WEBHOOK_SECRET }}
         run: |
           set -euo pipefail
@@ -127,6 +130,9 @@ jobs:
             printf 'MINIO_BUCKET=%s\n' "$MINIO_BUCKET"
             printf 'MINIO_ENDPOINT=%s\n' "$MINIO_ENDPOINT"
             printf 'WORDPRESS_DB_PASSWORD=%s\n' "$WP_DB_PASSWORD"
+            if [ -n "$WP_API_BASE" ]; then printf 'WP_API_BASE=%s\n' "$WP_API_BASE"; fi
+            if [ -n "$WP_ADMIN_USER" ]; then printf 'WP_ADMIN_USER=%s\n' "$WP_ADMIN_USER"; fi
+            if [ -n "$WP_APP_PASSWORD" ]; then printf 'WP_APP_PASSWORD=%s\n' "$WP_APP_PASSWORD"; fi
             printf 'WEBHOOK_SECRET=%s\n' "$WEBHOOK_SECRET"
           } > "$tmp_env"
           echo "path=$tmp_env" >> "$GITHUB_OUTPUT"
