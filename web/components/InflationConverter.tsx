@@ -69,8 +69,7 @@ export default function InflationConverter() {
   };
 
   return (
-    <section className="bg-white shadow rounded-lg p-6">
-      <h2 className="text-xl font-semibold mb-4">Inflation Converter</h2>
+    <div className="space-y-5">
       <form className="space-y-4" onSubmit={handleSubmit}>
         <label className="block">
           <span className="text-sm font-medium text-slate-700">Amount (₹)</span>
@@ -118,7 +117,7 @@ export default function InflationConverter() {
           </label>
         </div>
         <button
-          className="inline-flex items-center justify-center rounded bg-blue-600 px-4 py-2 font-semibold text-white hover:bg-blue-700"
+          className="inline-flex items-center justify-center rounded-full bg-blue-600 px-5 py-2 text-sm font-semibold text-white transition hover:bg-blue-700"
           type="submit"
         >
           Convert
@@ -126,11 +125,11 @@ export default function InflationConverter() {
       </form>
       {error && <p className="mt-4 text-sm text-red-600">{error}</p>}
       {result !== null && !error && (
-        <div className="mt-6 rounded bg-blue-50 p-4 text-blue-900">
-          <p className="text-sm font-medium">Inflation-adjusted amount</p>
-          <p className="text-2xl font-bold">₹{result.toFixed(2)}</p>
+        <div className="mt-6 rounded-2xl bg-blue-50/80 p-5 text-blue-900">
+          <p className="text-sm font-medium uppercase tracking-wide">Inflation-adjusted amount</p>
+          <p className="mt-2 text-3xl font-semibold">₹{result.toFixed(2)}</p>
         </div>
       )}
-    </section>
+    </div>
   );
 }

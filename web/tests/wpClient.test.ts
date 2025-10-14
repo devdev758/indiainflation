@@ -36,7 +36,12 @@ describe("wpClient", () => {
         title: { rendered: "Sample Post" },
         excerpt: { rendered: "<p>Summary</p>" },
         content: { rendered: "<p>Content</p>" },
-        date: "2025-10-13T00:00:00"
+        date: "2025-10-13T00:00:00",
+        _embedded: {
+          author: [{ id: 12, name: "Editorial Team" }],
+          "wp:featuredmedia": [{ id: 55, source_url: "https://example.test/image.jpg", alt_text: "Alt" }],
+          "wp:term": [[{ id: 9, taxonomy: "category", name: "Economy", slug: "economy" }]]
+        }
       }
     ];
 
@@ -53,7 +58,10 @@ describe("wpClient", () => {
         slug: "sample-post",
         title: "Sample Post",
         excerpt: "<p>Summary</p>",
-        date: "2025-10-13T00:00:00"
+        date: "2025-10-13T00:00:00",
+        author: "Editorial Team",
+        featuredImage: "https://example.test/image.jpg",
+        categories: [{ id: 9, name: "Economy", slug: "economy" }]
       }
     ]);
 
@@ -83,7 +91,7 @@ describe("wpClient", () => {
     await fetchPosts({ per_page: 2, page: 3 });
 
     expect((global.fetch as jest.Mock).mock.calls[0][0]).toBe(
-      "https://example.test/index.php?rest_route=%2Fwp%2Fv2%2Fposts&per_page=2&page=3&status=publish&_fields=id%2Cslug%2Ctitle%2Cexcerpt%2Cdate%2Ccontent"
+      "https://example.test/index.php?rest_route=%2Fwp%2Fv2%2Fposts&per_page=2&page=3&status=publish&_embed=author%2Cwp%3Afeaturedmedia%2Cwp%3Aterm"
     );
   });
 
@@ -100,7 +108,7 @@ describe("wpClient", () => {
 
     expect((global.fetch as jest.Mock)).toHaveBeenCalledTimes(2);
     expect((global.fetch as jest.Mock).mock.calls[1][0]).toBe(
-      "http://fallback.test/wp-json/wp/v2/posts?per_page=1&page=1&status=publish&_fields=id%2Cslug%2Ctitle%2Cexcerpt%2Cdate%2Ccontent"
+      "http://fallback.test/wp-json/wp/v2/posts?per_page=1&page=1&status=publish&_embed=author%2Cwp%3Afeaturedmedia%2Cwp%3Aterm"
     );
   });
 

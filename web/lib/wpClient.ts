@@ -5,6 +5,12 @@ type FetchPostsArgs = {
   page?: number;
 };
 
+type RawEmbedded = {
+  author?: Array<{ id: number; name?: string; slug?: string }>;
+  "wp:featuredmedia"?: Array<{ id: number; source_url?: string; alt_text?: string }>;
+  "wp:term"?: Array<Array<{ id: number; taxonomy?: string; name?: string; slug?: string }>>;
+};
+
 type RawPost = {
   id: number;
   slug: string;
@@ -12,6 +18,7 @@ type RawPost = {
   excerpt: { rendered: string };
   content: { rendered: string };
   date: string;
+  _embedded?: RawEmbedded;
 };
 
 export type PostSummary = {
@@ -20,10 +27,16 @@ export type PostSummary = {
   title: string;
   excerpt: string;
   date: string;
+  author?: string;
+  featuredImage?: string;
+  categories: Array<{ id: number; name: string; slug: string }>;
 };
 
 export type PostDetail = PostSummary & {
   content: string;
+  readingTimeMinutes: number;
+  tags: Array<{ id: number; name: string; slug: string }>;
+  featuredImageAlt?: string;
 };
 
 const TTL_MS = 60 * 1000;
@@ -145,14 +158,64 @@ async function wpFetch<T>(path: string, searchParams?: Record<string, string | n
     : new Error("All WordPress API base URLs failed");
 }
 
+function extractTerms(raw?: RawEmbedded["wp:term"]): {
+  categories: Array<{ id: number; name: string; slug: string }>;
+  tags: Array<{ id: number; name: string; slug: string }>;
+} {
+  const categories: Array<{ id: number; name: string; slug: string }> = [];
+  const tags: Array<{ id: number; name: string; slug: string }> = [];
+
+  if (!raw) return { categories, tags };
+
+  raw.forEach((group) => {
+    group.forEach((term) => {
+      const item = {
+        id: term.id,
+        name: term.name ?? "",
+        slug: term.slug ?? ""
+      };
+      if (term.taxonomy === "category") {
+        categories.push(item);
+      } else if (term.taxonomy === "post_tag") {
+        tags.push(item);
+      }
+    });
+  });
+
+  return {
+    categories: categories.filter((category) => category.name.length > 0),
+    tags: tags.filter((tag) => tag.name.length > 0)
+  };
+}
+
+function stripHtml(value: string): string {
+  return value.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim();
+}
+
+function estimateReadingTimeMinutes(html: string): number {
+  const plainText = stripHtml(html);
+  const words = plainText.split(/\s+/).filter(Boolean).length;
+  return Math.max(1, Math.round(words / 200));
+}
+
 function mapPost(raw: RawPost): PostDetail {
+  const authorName = raw._embedded?.author?.[0]?.name ?? undefined;
+  const featured = raw._embedded?.["wp:featuredmedia"]?.[0];
+  const { categories, tags } = extractTerms(raw._embedded?.["wp:term"]);
+
   return {
     id: raw.id,
     slug: raw.slug,
     title: raw.title?.rendered ?? "",
     excerpt: raw.excerpt?.rendered ?? "",
     content: raw.content?.rendered ?? "",
-    date: raw.date
+    date: raw.date,
+    author: authorName,
+    featuredImage: featured?.source_url,
+    featuredImageAlt: featured?.alt_text,
+    categories,
+    tags,
+    readingTimeMinutes: estimateReadingTimeMinutes(raw.content?.rendered ?? "")
   };
 }
 
@@ -161,7 +224,7 @@ export async function fetchPosts({ per_page = 10, page = 1 }: FetchPostsArgs = {
     per_page,
     page,
     status: "publish",
-    _fields: "id,slug,title,excerpt,date,content"
+    _embed: "author,wp:featuredmedia,wp:term"
   });
   return posts.map((post) => {
     const mapped = mapPost(post);
@@ -170,7 +233,10 @@ export async function fetchPosts({ per_page = 10, page = 1 }: FetchPostsArgs = {
       slug: mapped.slug,
       title: mapped.title,
       excerpt: mapped.excerpt,
-      date: mapped.date
+      date: mapped.date,
+      author: mapped.author,
+      featuredImage: mapped.featuredImage,
+      categories: mapped.categories
     } satisfies PostSummary;
   });
 }
@@ -185,7 +251,7 @@ export async function fetchPostBySlug(slug: string): Promise<PostDetail | null> 
     page: 1,
     status: "publish",
     slug,
-    _fields: "id,slug,title,excerpt,date,content"
+    _embed: "author,wp:featuredmedia,wp:term"
   });
 
   if (!results.length) {
@@ -193,6 +259,40 @@ export async function fetchPostBySlug(slug: string): Promise<PostDetail | null> 
   }
 
   return mapPost(results[0]);
+}
+
+export async function fetchRelatedPosts(options: {
+  categories: number[];
+  excludeId: number;
+  per_page?: number;
+}): Promise<PostSummary[]> {
+  const { categories, excludeId, per_page = 3 } = options;
+  if (!categories.length) {
+    return [];
+  }
+
+  const posts = await wpFetch<RawPost[]>("wp/v2/posts", {
+    per_page,
+    page: 1,
+    status: "publish",
+    categories: categories.join(","),
+    exclude: excludeId,
+    _embed: "author,wp:featuredmedia,wp:term"
+  });
+
+  return posts.map((post) => {
+    const mapped = mapPost(post);
+    return {
+      id: mapped.id,
+      slug: mapped.slug,
+      title: mapped.title,
+      excerpt: mapped.excerpt,
+      date: mapped.date,
+      author: mapped.author,
+      featuredImage: mapped.featuredImage,
+      categories: mapped.categories
+    } satisfies PostSummary;
+  });
 }
 
 export function __clearWpClientCache() {
