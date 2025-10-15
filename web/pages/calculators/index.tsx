@@ -1,5 +1,6 @@
 import Head from "next/head";
 import Link from "next/link";
+import type { GetStaticProps, InferGetStaticPropsType } from "next";
 import type { ReactElement } from "react";
 
 import InflationConverter from "@/components/InflationConverter";
@@ -9,39 +10,64 @@ import { StateComparisonChart } from "@/components/calculators/StateComparisonCh
 import { YoYCalculator } from "@/components/calculators/YoYCalculator";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { COMPARISON_SLUGS } from "@/lib/data/catalog";
+import { loadPhase3Items, type Phase3ItemDataset } from "@/lib/data/phase3";
+import { collectRegionOptions } from "@/lib/data/phase3Shared";
 
-export default function CalculatorsIndex(): ReactElement {
+type CalculatorsPageProps = {
+  generatedAt: string;
+  items: Phase3ItemDataset[];
+  regions: Array<{ code: string; name: string; type: string }>;
+};
+
+export const getStaticProps: GetStaticProps<CalculatorsPageProps> = async () => {
+  const items = await loadPhase3Items(COMPARISON_SLUGS);
+  const regions = collectRegionOptions(items);
+
+  return {
+    props: {
+      generatedAt: new Date().toISOString(),
+      items,
+      regions
+    },
+    revalidate: 300
+  };
+};
+
+export default function CalculatorsIndex({ items, regions, generatedAt }: InferGetStaticPropsType<typeof getStaticProps>): ReactElement {
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "https://indiainflation.in";
+  const canonicalUrl = `${siteUrl.replace(/\/$/, "")}/calculators`;
   const structuredData = {
     "@context": "https://schema.org",
     "@type": "WebPage",
     headline: "Indiainflation Calculators",
-    url: `${siteUrl}/calculators`,
+    url: canonicalUrl,
+    dateModified: generatedAt,
     hasPart: [
       {
         "@type": "WebApplication",
         name: "Inflation Converter",
-        url: `${siteUrl}/calculators`
+        url: canonicalUrl
       },
       {
         "@type": "WebApplication",
         name: "YoY Inflation Calculator",
-        url: `${siteUrl}/calculators`
+        url: canonicalUrl
       },
       {
         "@type": "WebApplication",
         name: "CPI Comparison Tool",
-        url: `${siteUrl}/calculators`
+        url: canonicalUrl
       },
       {
         "@type": "WebApplication",
         name: "CPI vs WPI Differential",
-        url: `${siteUrl}/calculators`
+        url: canonicalUrl
       },
       {
         "@type": "WebApplication",
         name: "State-wise CPI Comparison",
-        url: `${siteUrl}/calculators`
+        url: canonicalUrl
       }
     ]
   };
@@ -53,8 +79,9 @@ export default function CalculatorsIndex(): ReactElement {
           name="description"
           content="Convert historical rupee amounts, compute YoY inflation, and compare CPI item trends with Indiainflation’s interactive calculators."
         />
+        <link rel="canonical" href={canonicalUrl} />
         <meta property="og:type" content="website" />
-        <meta property="og:url" content={`${siteUrl}/calculators`} />
+        <meta property="og:url" content={canonicalUrl} />
         <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(structuredData) }} />
       </Head>
 
@@ -90,7 +117,7 @@ export default function CalculatorsIndex(): ReactElement {
       </section>
 
       <section className="mt-12">
-        <CpiComparisonTool />
+        <CpiComparisonTool datasets={items} regions={regions} />
       </section>
 
       <section className="mt-12 grid gap-8 md:grid-cols-2">

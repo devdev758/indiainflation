@@ -122,15 +122,15 @@ export function CpiWpiDifferential(): ReactElement {
         <div className="grid gap-3 rounded-2xl border border-slate-200 bg-slate-50/80 p-4 text-sm text-slate-600 md:grid-cols-3">
           <div>
             <p className="text-xs uppercase tracking-wide text-slate-500">{cpiLabel}</p>
-            <p className="text-2xl font-semibold text-slate-900">{formatValue(latest?.cpi)}</p>
+            <p className="text-2xl font-semibold text-slate-900">{formatValue(latest?.cpi ?? null)}</p>
           </div>
           <div>
             <p className="text-xs uppercase tracking-wide text-slate-500">{wpiLabel}</p>
-            <p className="text-2xl font-semibold text-slate-900">{formatValue(latest?.wpi)}</p>
+            <p className="text-2xl font-semibold text-slate-900">{formatValue(latest?.wpi ?? null)}</p>
           </div>
           <div>
             <p className="text-xs uppercase tracking-wide text-slate-500">{spreadLabel}</p>
-            <p className="text-2xl font-semibold text-blue-600">{formatValue(latest?.spread)} {spreadUnit}</p>
+            <p className="text-2xl font-semibold text-blue-600">{formatValue(latest?.spread ?? null)} {spreadUnit}</p>
           </div>
         </div>
       </CardContent>
