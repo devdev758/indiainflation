@@ -1,138 +1,312 @@
 'use client';
 
-import { useMemo, useState, type ReactElement } from "react";
-import {
-  CartesianGrid,
-  Legend,
-  Line,
-  LineChart,
-  ResponsiveContainer,
-  Tooltip,
-  XAxis,
-  YAxis
-} from "recharts";
+import clsx from "clsx";
+import { useEffect, useMemo, useState, type Dispatch, type ReactElement, type SetStateAction } from "react";
 
+import { CpiTrendChart, type CpiTrendPoint } from "@/components/charts/CpiTrendChart";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { cn } from "@/lib/utils";
-import { useItemExports } from "@/lib/client/useItemExports";
+import {
+  deriveMetricValue,
+  getRegionSeries,
+  parseDateKey,
+  subtractMonths,
+  type Phase3ItemDataset,
+  type Phase3MetricKey
+} from "@/lib/data/phase3Shared";
 
-const ITEMS = [
-  { label: "Milk", value: "milk", color: "#2563eb" },
-  { label: "Rice", value: "rice", color: "#f97316" }
+const RANGE_OPTIONS: Array<{ key: string; label: string; months: number | null }> = [
+  { key: "5y", label: "5Y", months: 60 },
+  { key: "10y", label: "10Y", months: 120 },
+  { key: "25y", label: "25Y", months: 300 },
+  { key: "max", label: "All", months: null }
 ];
 
-const ITEM_SLUGS = ITEMS.map((item) => item.value);
+const METRIC_OPTIONS: Array<{ key: Phase3MetricKey; label: string }> = [
+  { key: "index", label: "Index" },
+  { key: "yoy", label: "YoY %" },
+  { key: "mom", label: "WoW % (MoM)" }
+];
 
-type SeriesRow = {
-  date: string;
-  [key: string]: number | string | null;
+const FALLBACK_COLORS = ["#2563eb", "#f97316", "#10b981", "#9333ea", "#ef4444", "#14b8a6"];
+
+type CpiComparisonToolProps = {
+  datasets: Phase3ItemDataset[];
+  regions: Array<{ code: string; name: string; type: string }>;
 };
 
-function normaliseValue(entry: { index?: number; index_value?: number; value?: number }): number | null {
-  const candidate = entry.index_value ?? entry.index ?? entry.value;
-  return typeof candidate === "number" ? candidate : null;
-}
+export function CpiComparisonTool({ datasets, regions }: CpiComparisonToolProps): ReactElement {
+  const datasetMap = useMemo(() => {
+    const map = new Map<string, Phase3ItemDataset>();
+    datasets.forEach((dataset) => {
+      map.set(dataset.slug, dataset);
+    });
+    return map;
+  }, [datasets]);
 
-function formatMonthLabel(value: string): string {
-  try {
-    const parsed = new Date(`${value}-01`);
-    return new Intl.DateTimeFormat("en", { month: "short" }).format(parsed);
-  } catch (error) {
-    return value;
-  }
-}
+  const availableSlugs = useMemo(() => datasets.map((dataset) => dataset.slug), [datasets]);
 
-export function CpiComparisonTool(): ReactElement {
-  const [selectedItems, setSelectedItems] = useState<string[]>(ITEMS.map((item) => item.value));
-  const { data, loading, error } = useItemExports(ITEM_SLUGS);
+  const colorMap = useMemo(() => {
+    const map = new Map<string, string>();
+    availableSlugs.forEach((slug, index) => {
+      map.set(slug, FALLBACK_COLORS[index % FALLBACK_COLORS.length]);
+    });
+    return map;
+  }, [availableSlugs]);
 
-  const chartData: SeriesRow[] = useMemo(() => {
-    const map = new Map<string, SeriesRow>();
+  const defaultSelected = useMemo(() => availableSlugs.slice(0, 3), [availableSlugs]);
+  const defaultRegion = useMemo(() => {
+    const allIndia = regions.find((region) => region.code === "all-india");
+    if (allIndia) return allIndia.code;
+    if (datasets[0]) return datasets[0].defaultRegion;
+    return regions[0]?.code ?? "all-india";
+  }, [datasets, regions]);
 
-    ITEMS.forEach(({ value }) => {
-      const exportData = data[value];
-      if (!exportData?.series) return;
+  const [selectedItems, setSelectedItems] = useState<string[]>(defaultSelected);
+  const [selectedRegion, setSelectedRegion] = useState<string>(defaultRegion);
+  const [selectedRange, setSelectedRange] = useState<string>("10y");
+  const [selectedMetric, setSelectedMetric] = useState<Phase3MetricKey>("index");
+  const [normalise, setNormalise] = useState<boolean>(false);
 
-      exportData.series.forEach((entry) => {
-        const row = map.get(entry.date) ?? { date: entry.date };
-        row[value] = normaliseValue(entry) ?? null;
-        map.set(entry.date, row);
+  useEffect(() => {
+    setSelectedRegion(defaultRegion);
+  }, [defaultRegion]);
+
+  useEffect(() => {
+    if (!availableSlugs.length) {
+      setSelectedItems([]);
+      return;
+    }
+    setSelectedItems((prev) => {
+      const filtered = prev.filter((slug) => availableSlugs.includes(slug));
+      return filtered.length ? filtered : availableSlugs.slice(0, 3);
+    });
+  }, [availableSlugs]);
+
+  useEffect(() => {
+    if (selectedMetric !== "index" && normalise) {
+      setNormalise(false);
+    }
+  }, [selectedMetric, normalise]);
+
+  const latestDate = useMemo(() => {
+    let candidate: Date | null = null;
+    selectedItems.forEach((slug) => {
+      const dataset = datasetMap.get(slug);
+      if (!dataset) return;
+      const regionSeries = getRegionSeries(dataset, selectedRegion);
+      const lastEntry = regionSeries?.series.at(-1);
+      if (!lastEntry) return;
+      const parsed = parseDateKey(lastEntry.date);
+      if (!candidate || parsed > candidate) {
+        candidate = parsed;
+      }
+    });
+    return candidate;
+  }, [datasetMap, selectedItems, selectedRegion]);
+
+  const startDate = useMemo(() => {
+    const option = RANGE_OPTIONS.find((entry) => entry.key === selectedRange);
+    if (!option || option.months === null || !latestDate) {
+      return null;
+    }
+    return subtractMonths(latestDate, option.months);
+  }, [selectedRange, latestDate]);
+
+  const chartData = useMemo<CpiTrendPoint[]>(() => {
+    const dateMap = new Map<string, CpiTrendPoint>();
+
+    selectedItems.forEach((slug) => {
+      const dataset = datasetMap.get(slug);
+      if (!dataset) return;
+      const regionData = getRegionSeries(dataset, selectedRegion);
+      if (!regionData) return;
+      let baseValue: number | null = null;
+
+      regionData.series.forEach((entry) => {
+        const parsedDate = parseDateKey(entry.date);
+        if (startDate && parsedDate < startDate) {
+          return;
+        }
+
+        const rawValue = deriveMetricValue(entry, selectedMetric);
+        let value = rawValue;
+
+        if (selectedMetric === "index" && normalise) {
+          if (rawValue === null) {
+            value = null;
+          } else {
+            if (baseValue === null) {
+              baseValue = rawValue === 0 ? null : rawValue;
+            }
+            value = baseValue ? (rawValue / baseValue) * 100 : null;
+          }
+        }
+
+        const point = dateMap.get(entry.date) ?? { date: entry.date };
+        (point as CpiTrendPoint)[slug] = value;
+        dateMap.set(entry.date, point as CpiTrendPoint);
       });
     });
 
-    return Array.from(map.values())
-      .sort((a, b) => new Date(`${a.date}-01`).getTime() - new Date(`${b.date}-01`).getTime())
-      .slice(-18);
-  }, [data]);
+    return Array.from(dateMap.values()).sort((a, b) => (a.date > b.date ? 1 : -1));
+  }, [datasetMap, selectedItems, selectedRegion, selectedMetric, startDate, normalise]);
 
-  function toggleItem(value: string) {
-    setSelectedItems((prev) => (prev.includes(value) ? prev.filter((item) => item !== value) : [...prev, value]));
-  }
+  const seriesConfig = useMemo(() => {
+    return selectedItems.map((slug) => {
+      const dataset = datasetMap.get(slug);
+      const color = colorMap.get(slug) ?? FALLBACK_COLORS[0];
+      return {
+        key: slug,
+        label: dataset?.name ?? slug,
+        color
+      };
+    });
+  }, [datasetMap, selectedItems, colorMap]);
+
+  const valueFormatter = useMemo(() => {
+    const formatNumber = (value: number, digits: number, suffix = "") => {
+      if (!Number.isFinite(value)) {
+        return "--";
+      }
+      return `${value.toFixed(digits)}${suffix}`;
+    };
+
+    if (selectedMetric === "index") {
+      return (value: number) => formatNumber(value, 1);
+    }
+    return (value: number) => formatNumber(value, 2, "%");
+  }, [selectedMetric]);
+
+  const regionLabel = useMemo(() => regions.find((region) => region.code === selectedRegion)?.name ?? selectedRegion, [regions, selectedRegion]);
 
   return (
     <Card>
       <CardHeader>
         <CardTitle>CPI comparison</CardTitle>
-        <CardDescription>Compare indexed CPI values across essential household items.</CardDescription>
+        <CardDescription>
+          Overlay CPI, WPI, and IMF-derived price indices by region. Adjust the horizon, toggle YoY vs WoW (MoM), or normalise to a common base for relative spreads.
+        </CardDescription>
       </CardHeader>
-      <CardContent className="space-y-4">
-        <div className="flex flex-wrap gap-3">
-          {ITEMS.map((item) => (
-            <label
-              key={item.value}
-              className={cn(
-                "flex cursor-pointer items-center gap-2 rounded-full border px-4 py-2 text-sm transition",
-                selectedItems.includes(item.value)
-                  ? "border-blue-500 bg-blue-50 text-blue-700"
-                  : "border-slate-200 bg-white text-slate-600 hover:border-slate-300"
-              )}
-            >
-              <input
-                type="checkbox"
-                className="hidden"
-                checked={selectedItems.includes(item.value)}
-                onChange={() => toggleItem(item.value)}
-              />
-              <span className="inline-flex h-2 w-2 rounded-full" style={{ backgroundColor: item.color }} />
-              {item.label}
+      <CardContent className="space-y-5">
+        <div className="flex flex-wrap items-center justify-between gap-4">
+          <div className="flex flex-wrap gap-2">
+            {RANGE_OPTIONS.map((option) => (
+              <button
+                key={option.key}
+                type="button"
+                onClick={() => setSelectedRange(option.key)}
+                className={clsx(
+                  "rounded-full px-4 py-2 text-sm font-medium transition",
+                  selectedRange === option.key
+                    ? "bg-blue-600 text-white shadow"
+                    : "border border-slate-200 bg-white text-slate-600 hover:border-blue-300"
+                )}
+              >
+                {option.label}
+              </button>
+            ))}
+          </div>
+          <div className="flex flex-wrap items-center gap-3 text-sm">
+            <label className="text-slate-500" htmlFor="comparison-region">
+              Region
             </label>
-          ))}
+            <select
+              id="comparison-region"
+              value={selectedRegion}
+              onChange={(event) => setSelectedRegion(event.target.value)}
+              className="h-10 rounded-full border border-slate-200 bg-white px-4 text-sm text-slate-700 focus:border-blue-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            >
+              {regions.map((region) => (
+                <option key={region.code} value={region.code}>
+                  {region.name} {region.type !== "nation" ? `(${region.type})` : ""}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div className="flex gap-2">
+            {METRIC_OPTIONS.map((option) => (
+              <button
+                key={option.key}
+                type="button"
+                onClick={() => setSelectedMetric(option.key)}
+                className={clsx(
+                  "rounded-full px-4 py-2 text-sm font-medium transition",
+                  selectedMetric === option.key
+                    ? "bg-slate-900 text-white shadow"
+                    : "border border-slate-200 bg-white text-slate-600 hover:border-blue-300"
+                )}
+              >
+                {option.label}
+              </button>
+            ))}
+          </div>
         </div>
 
-        {error && <p className="text-sm text-red-600">{error}</p>}
+        <div className="flex flex-wrap items-center gap-3 text-sm text-slate-600">
+          <label className={clsx("flex items-center gap-2", selectedMetric !== "index" ? "opacity-50" : "")}
+          >
+            <input
+              type="checkbox"
+              className="h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
+              checked={normalise}
+              onChange={(event) => setNormalise(event.target.checked)}
+              disabled={selectedMetric !== "index"}
+            />
+            <span>Normalise to base 100</span>
+          </label>
+          <span className="text-xs uppercase tracking-[0.3em] text-slate-400">{regionLabel}</span>
+        </div>
 
-        <div className="h-80 rounded-2xl border border-slate-200 bg-white/70 p-2">
-          {loading ? (
-            <div className="flex h-full items-center justify-center text-sm text-slate-500">Loading comparison…</div>
+        <div className="rounded-2xl border border-slate-200 bg-white/70 p-3">
+          {chartData.length > 0 ? (
+            <CpiTrendChart
+              data={chartData}
+              series={seriesConfig}
+              valueFormatter={valueFormatter}
+              yAxisFormatter={(value) => valueFormatter(Number(value))}
+              variant="bare"
+              height={360}
+            />
           ) : (
-            <ResponsiveContainer width="100%" height="100%">
-              <LineChart data={chartData} margin={{ top: 12, right: 24, left: 0, bottom: 0 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#E2E8F0" />
-                <XAxis dataKey="date" tickFormatter={formatMonthLabel} stroke="#94A3B8" fontSize={12} tickMargin={8} />
-                <YAxis stroke="#94A3B8" fontSize={12} />
-                <Tooltip
-                  contentStyle={{ backgroundColor: "white", borderRadius: 12, borderColor: "#E2E8F0" }}
-                  formatter={(value: number, name: string) => [`${value.toFixed(1)}`, ITEMS.find((item) => item.value === name)?.label ?? name]}
-                  labelFormatter={(label) => new Intl.DateTimeFormat("en", { month: "long", year: "numeric" }).format(new Date(`${label}-01`))}
-                />
-                <Legend />
-                {ITEMS.filter((item) => selectedItems.includes(item.value)).map((item) => (
-                  <Line
-                    key={item.value}
-                    type="monotone"
-                    dataKey={item.value}
-                    name={item.label}
-                    stroke={item.color}
-                    strokeWidth={2.5}
-                    dot={false}
-                    activeDot={{ r: 5 }}
-                  />
-                ))}
-              </LineChart>
-            </ResponsiveContainer>
+            <div className="flex h-80 items-center justify-center text-sm text-slate-500">Not enough data for the selected filters.</div>
           )}
+        </div>
+
+        <div className="flex flex-wrap gap-3">
+          {availableSlugs.map((slug) => {
+            const dataset = datasetMap.get(slug);
+            const isActive = selectedItems.includes(slug);
+            const color = colorMap.get(slug) ?? FALLBACK_COLORS[0];
+            return (
+              <button
+                key={slug}
+                type="button"
+                onClick={() => toggleItem(slug, setSelectedItems)}
+                className={clsx(
+                  "flex items-center gap-2 rounded-full border px-4 py-2 text-sm transition",
+                  isActive ? "border-blue-500 bg-blue-50 text-blue-700" : "border-slate-200 bg-white text-slate-600 hover:border-slate-300"
+                )}
+                aria-pressed={isActive}
+              >
+                <span className="inline-flex h-2 w-2 rounded-full" style={{ backgroundColor: color }} />
+                {dataset?.name ?? slug}
+              </button>
+            );
+          })}
         </div>
       </CardContent>
     </Card>
   );
+}
+
+function toggleItem(slug: string, setSelectedItems: Dispatch<SetStateAction<string[]>>) {
+  setSelectedItems((prev) => {
+    if (prev.includes(slug)) {
+      if (prev.length === 1) {
+        return prev;
+      }
+      return prev.filter((value) => value !== slug);
+    }
+    return [...prev, slug];
+  });
 }

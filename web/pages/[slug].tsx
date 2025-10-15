@@ -168,11 +168,11 @@ export default function BlogPostPage({ post, related }: InferGetStaticPropsType<
           <Link className="rounded-full border border-slate-300 px-4 py-2 transition hover:border-blue-400" href="/calculators">
             CPI Calculators hub
           </Link>
-          <Link className="rounded-full border border-slate-300 px-4 py-2 transition hover:border-blue-400" href="/items/milk">
-            Milk CPI explorer
+          <Link className="rounded-full border border-slate-300 px-4 py-2 transition hover:border-blue-400" href="/items/cpi-all-items">
+            Headline CPI explorer
           </Link>
-          <Link className="rounded-full border border-slate-300 px-4 py-2 transition hover:border-blue-400" href="/items/rice">
-            Rice CPI explorer
+          <Link className="rounded-full border border-slate-300 px-4 py-2 transition hover:border-blue-400" href="/items/wpi-all-commodities">
+            WPI dashboard
           </Link>
         </CardContent>
       </Card>

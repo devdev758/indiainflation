@@ -127,11 +127,11 @@ export default function ArticlesIndex({ posts }: InferGetStaticPropsType<typeof 
               <CardTitle>Popular calculators</CardTitle>
             </CardHeader>
             <CardContent className="space-y-2 text-sm text-slate-500">
-              <Link className="block rounded-xl border border-slate-200 p-3 transition hover:border-blue-200" href="/items/milk">
-                Milk CPI Explorer
+              <Link className="block rounded-xl border border-slate-200 p-3 transition hover:border-blue-200" href="/items/cpi-all-items">
+                Headline CPI Explorer
               </Link>
-              <Link className="block rounded-xl border border-slate-200 p-3 transition hover:border-blue-200" href="/items/rice">
-                Rice CPI Explorer
+              <Link className="block rounded-xl border border-slate-200 p-3 transition hover:border-blue-200" href="/items/cpi-food-and-beverages">
+                Food CPI Explorer
               </Link>
               <Link className="block rounded-xl border border-slate-200 p-3 transition hover:border-blue-200" href="/calculators">
                 Inflation calculators hub

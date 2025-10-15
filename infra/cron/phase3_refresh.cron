@@ -1,0 +1,2 @@
+# Phase 4 CPI/WPI refresh — runs on the 5th of every month at 02:15 server time
+15 2 5 * * /usr/bin/env bash -lc 'cd "$PHASE4_ETL_ROOT" && python -m etl.monthly_refresh --config "$PHASE4_ETL_CONFIG"'

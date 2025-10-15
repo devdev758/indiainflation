@@ -33,14 +33,14 @@ describe("SearchBar", () => {
       {
         ok: true,
         status: 200,
-        json: async () => [{ id: "milk", name: "Milk", category: "general", last_index_value: 132.7 }],
+        json: async () => [{ id: "cpi-all-items", name: "CPI All Items", category: "cpi", last_index_value: 175.2 }],
       } as Response
     );
 
     render(<SearchBar />);
 
     const input = screen.getByRole("combobox");
-    await userEvent.type(input, "milk");
+    await userEvent.type(input, "cpi");
 
     expect(fetchMock).not.toHaveBeenCalled();
 
@@ -49,7 +49,7 @@ describe("SearchBar", () => {
     });
 
     expect(fetchMock).toHaveBeenCalledTimes(1);
-    expect(fetchMock.mock.calls[0]?.[0]).toContain("/api/v1/search?q=milk&type=item");
+    expect(fetchMock.mock.calls[0]?.[0]).toContain("/api/v1/search?q=cpi&type=item");
   });
 
   it("allows keyboard navigation and selection", async () => {
@@ -58,8 +58,8 @@ describe("SearchBar", () => {
         ok: true,
         status: 200,
         json: async () => [
-          { id: "milk", name: "Milk", category: "general", last_index_value: 132.7 },
-          { id: "rice", name: "Rice", category: "grains", last_index_value: 140.1 },
+          { id: "cpi-all-items", name: "CPI All Items", category: "cpi", last_index_value: 175.2 },
+          { id: "wpi-all-commodities", name: "WPI All Commodities", category: "wpi", last_index_value: 156.4 },
         ],
       } as Response
     );
@@ -67,7 +67,7 @@ describe("SearchBar", () => {
     render(<SearchBar />);
 
     const input = screen.getByRole("combobox");
-    await userEvent.type(input, "rice");
+    await userEvent.type(input, "wpi");
 
     await act(async () => {
       await new Promise((resolve) => setTimeout(resolve, 350));
@@ -82,7 +82,7 @@ describe("SearchBar", () => {
     fireEvent.keyDown(input, { key: "ArrowDown" });
     fireEvent.keyDown(input, { key: "Enter" });
 
-    expect(pushMock).toHaveBeenCalledWith("/items/rice");
+    expect(pushMock).toHaveBeenCalledWith("/items/wpi-all-commodities");
   });
 
   it("shows empty state when no results", async () => {

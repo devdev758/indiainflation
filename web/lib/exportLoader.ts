@@ -18,6 +18,31 @@ export type ItemExportData = {
     last_index_value: number | null;
     average_index_value: number | null;
   };
+  default_region?: string;
+  regions?: Array<{
+    code: string;
+    name: string;
+    type: string;
+  }>;
+  regional_series?: Array<{
+    code: string;
+    name: string;
+    type: string;
+    metadata: {
+      first_date: string | null;
+      last_date: string | null;
+      count: number;
+      last_index_value: number | null;
+      average_index_value: number | null;
+    };
+    series: Array<{
+      date: string;
+      index_value: number;
+      yoy_pct: number | null;
+      mom_pct: number | null;
+    }>;
+  }>;
+  export_schema_version?: string;
   series: Array<{
     date: string;
     index_value: number;

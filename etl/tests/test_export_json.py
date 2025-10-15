@@ -122,6 +122,10 @@ def test_export_item_writes_local_file(tmp_path, monkeypatch, sqlite_database):
 
     assert payload["slug"] == "sample-item"
     assert payload["name"] == "Sample Item"
+    assert payload["default_region"] == "all-india"
+    assert payload["regions"]
+    assert payload["regional_series"]
+    assert payload["regional_series"][0]["code"] == "all-india"
     series = payload["series"]
     assert series[0]["yoy_pct"] is None
     jan_2024 = next(point for point in series if point["date"] == "2024-01-01")
@@ -157,6 +161,7 @@ def test_export_region_writes_local_file(tmp_path, monkeypatch, sqlite_database)
     assert export_path.exists()
     payload = load_export(export_path)
     assert payload["slug"] == "all-india"
+    assert payload["export_schema_version"] == "v2"
     series_dates = [entry["date"] for entry in payload["series"]]
     assert "2023-12-01" in series_dates
     assert "2023-02-01" not in series_dates

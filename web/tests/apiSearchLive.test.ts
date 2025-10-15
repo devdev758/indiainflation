@@ -34,15 +34,15 @@ describe("/api/v1/search integration stub", () => {
     process.env.TYPESENSE_API_KEY = "key";
   });
 
-  it("returns at least one result for milk", async () => {
+  it("returns at least one result for CPI all items", async () => {
     const typesensePayload = {
       hits: [
         {
           document: {
-            id: "milk",
-            name: "Milk",
-            category: "general",
-            last_index_value: 132.7,
+            id: "cpi-all-items",
+            name: "CPI All Items",
+            category: "cpi",
+            last_index_value: 175.2,
           },
         },
       ],
@@ -53,7 +53,7 @@ describe("/api/v1/search integration stub", () => {
       json: async () => typesensePayload,
     } as unknown as Response);
 
-    const { req, res, getStatus, getJson } = createReqRes({ q: "milk", type: "item" });
+    const { req, res, getStatus, getJson } = createReqRes({ q: "cpi", type: "item" });
 
     await handler(req, res);
 
@@ -61,6 +61,6 @@ describe("/api/v1/search integration stub", () => {
     const payload = getJson();
     expect(Array.isArray(payload)).toBe(true);
     expect(payload).not.toHaveLength(0);
-    expect(payload[0]).toMatchObject({ id: "milk", name: "Milk" });
+    expect(payload[0]).toMatchObject({ id: "cpi-all-items", name: "CPI All Items" });
   });
 });

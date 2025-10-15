@@ -4,6 +4,8 @@ import type { ReactElement } from "react";
 
 import InflationConverter from "@/components/InflationConverter";
 import { CpiComparisonTool } from "@/components/calculators/CpiComparisonTool";
+import { CpiWpiDifferential } from "@/components/calculators/CpiWpiDifferential";
+import { StateComparisonChart } from "@/components/calculators/StateComparisonChart";
 import { YoYCalculator } from "@/components/calculators/YoYCalculator";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -29,6 +31,16 @@ export default function CalculatorsIndex(): ReactElement {
       {
         "@type": "WebApplication",
         name: "CPI Comparison Tool",
+        url: `${siteUrl}/calculators`
+      },
+      {
+        "@type": "WebApplication",
+        name: "CPI vs WPI Differential",
+        url: `${siteUrl}/calculators`
+      },
+      {
+        "@type": "WebApplication",
+        name: "State-wise CPI Comparison",
         url: `${siteUrl}/calculators`
       }
     ]
@@ -81,6 +93,11 @@ export default function CalculatorsIndex(): ReactElement {
         <CpiComparisonTool />
       </section>
 
+      <section className="mt-12 grid gap-8 md:grid-cols-2">
+        <CpiWpiDifferential />
+        <StateComparisonChart />
+      </section>
+
       <section className="mt-12 grid gap-6 md:grid-cols-2">
         <Card>
           <CardHeader>
@@ -100,11 +117,11 @@ export default function CalculatorsIndex(): ReactElement {
             <CardTitle>Explore CPI item pages</CardTitle>
           </CardHeader>
           <CardContent className="space-y-2 text-sm text-slate-600">
-            <Link className="block rounded-xl border border-slate-200 p-3 transition hover:border-blue-200" href="/items/milk">
-              Milk CPI explorer
+            <Link className="block rounded-xl border border-slate-200 p-3 transition hover:border-blue-200" href="/items/cpi-all-items">
+              Headline CPI explorer
             </Link>
-            <Link className="block rounded-xl border border-slate-200 p-3 transition hover:border-blue-200" href="/items/rice">
-              Rice CPI explorer
+            <Link className="block rounded-xl border border-slate-200 p-3 transition hover:border-blue-200" href="/items/cpi-food-and-beverages">
+              Food CPI explorer
             </Link>
           </CardContent>
         </Card>

@@ -7,7 +7,17 @@
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
-    "test": "jest"
+    "test": "jest",
+    "publish:phase2": "npx ts-node --compiler-options '{\"module\":\"commonjs\",\"moduleResolution\":\"node\"}' scripts/publishPhase2Articles.ts",
+    "publish:phase3": "npx ts-node --compiler-options '{\"module\":\"commonjs\",\"moduleResolution\":\"node\"}' scripts/publishPhase3Articles.ts",
+    "publish:phase4": "npx ts-node --compiler-options '{\"module\":\"commonjs\",\"moduleResolution\":\"node\"}' scripts/publishPhase4Articles.ts",
+    "report:phase3": "TS_NODE_PROJECT=tsconfig.json npx ts-node scripts/generatePhase3Report.ts",
+    "report:phase4": "npx ts-node --compiler-options '{\"module\":\"commonjs\",\"moduleResolution\":\"node\"}' -r tsconfig-paths/register scripts/generatePhase4Report.ts",
+    "screenshots:phase3": "TS_NODE_PROJECT=tsconfig.json npx ts-node scripts/capturePhase3Screens.ts",
+    "screenshots:phase4": "npx ts-node --compiler-options '{\"module\":\"commonjs\",\"moduleResolution\":\"node\"}' -r tsconfig-paths/register scripts/capturePhase4Screens.ts",
+    "seo:validate": "npx ts-node --compiler-options '{\"module\":\"commonjs\",\"moduleResolution\":\"node\"}' -r tsconfig-paths/register scripts/validateStructuredData.ts",
+    "sitemap:generate": "npx ts-node --compiler-options '{\"module\":\"commonjs\",\"moduleResolution\":\"node\"}' scripts/generateSitemap.ts",
+    "readiness:phase4": "npx ts-node --compiler-options '{\"module\":\"commonjs\",\"moduleResolution\":\"node\"}' -r tsconfig-paths/register scripts/generatePhase4Checklist.ts"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.667.0",
@@ -29,8 +39,8 @@
     "@testing-library/react": "^16.0.0",
     "@testing-library/user-event": "^14.6.1",
     "@types/jest": "^29.5.12",
-    "@types/node": "^22.7.4",
-    "@types/react": "^19.0.1",
+    "@types/node": "22.18.10",
+    "@types/react": "19.2.2",
     "@types/react-dom": "^19.0.1",
     "autoprefixer": "^10.4.21",
     "eslint": "^9.10.0",
@@ -38,9 +48,11 @@
     "jest": "^29.7.0",
     "jest-environment-jsdom": "^29.7.0",
     "postcss": "^8.4.47",
+    "puppeteer": "^24.24.1",
     "tailwindcss": "^3.4.14",
     "ts-jest": "^29.2.5",
-    "typescript": "^5.6.3"
+    "ts-node": "^10.9.2",
+    "typescript": "5.9.3"
   },
   "jest": {
     "preset": "ts-jest",

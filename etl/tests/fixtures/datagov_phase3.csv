@@ -1,0 +1,6 @@
+item,state,sector,year,month,value
+Milk,Delhi,urban,2024,Jan,164.2
+Rice,Delhi,urban,2024,Jan,150.1
+Milk,Maharashtra,rural,2024,Jan,158.4
+Rice,Maharashtra,rural,2024,Jan,149.9
+WPI All Commodities,All India,,2024,Jan,141.2

@@ -51,6 +51,7 @@ raw_series_table = Table(
     Column("year", SmallInteger, nullable=False),
     Column("month", SmallInteger, nullable=False),
     Column("raw_value", Numeric(12, 6), nullable=False),
+    Column("source", String(64), nullable=False, server_default=text("'mospi'")),
     Column("ingested_at", DateTime(timezone=True), server_default=func.now(), nullable=False),
 )
 

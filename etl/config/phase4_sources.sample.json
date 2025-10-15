@@ -1,0 +1,15 @@
+{
+  "mospi_annexes": [
+    "https://www.mospi.gov.in/sites/default/files/press_release/Monthly_CPI_Table1.xlsx"
+  ],
+  "datagov_resources": [
+    "https://data.gov.in/node/1059141/download" ,
+    "https://data.gov.in/node/1059143/download"
+  ],
+  "imf_series": [
+    "https://dataservices.imf.org/REST/SDMX_JSON.svc/CompactData/PCPSIPCH/A.IND.PCPI_IX?startPeriod=1958"
+  ],
+  "dpiit_resources": [
+    "https://eaindustry.nic.in/download_data_1112series_zip.asp?exp=Monthly" 
+  ]
+}

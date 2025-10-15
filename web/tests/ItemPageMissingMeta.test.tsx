@@ -14,16 +14,16 @@ jest.mock("@/components/ItemChart", () => ({ title }: { title: string }) => <div
 describe("ItemPage with missing metadata", () => {
   it("renders item name and fallback values when metadata is null", () => {
     const exportData = {
-      slug: "milk",
-      name: "Milk",
+      slug: "cpi-all-items",
+      name: "CPI All Items",
       metadata: null,
       series: [],
     } as const;
 
     render(<ItemPage exportData={exportData} />);
 
-    expect(screen.getByText("Milk")).toBeInTheDocument();
+    expect(screen.getByText("CPI All Items")).toBeInTheDocument();
     expect(screen.getByText("Points")).toBeInTheDocument();
-    expect(screen.getByTestId("item-chart")).toHaveTextContent("Milk CPI Index");
+    expect(screen.getByTestId("item-chart")).toHaveTextContent("CPI All Items CPI Index");
   });
 });

@@ -1,0 +1,11 @@
+{
+  "mospi_annexes": [
+    "https://example.com/mospi/cpi_table1.xlsx"
+  ],
+  "datagov_resources": [
+    "https://data.gov.in/resources/cpi_state_wise.csv"
+  ],
+  "imf_series": [
+    "https://example.com/imf/cpi_series.json"
+  ]
+}

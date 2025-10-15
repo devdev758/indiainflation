@@ -35,14 +35,16 @@ export function SiteHeader(): ReactElement {
   return (
     <header
       className={cn(
-        "sticky top-0 z-30 border-b border-slate-200 bg-white/80 backdrop-blur transition-shadow",
-        scrolled ? "shadow-lg" : "shadow-none"
+        "sticky top-0 z-40 border-b border-slate-800/60 backdrop-blur-xl transition-shadow",
+        scrolled ? "bg-slate-950/85 shadow-lg" : "bg-slate-950/70 shadow-none"
       )}
     >
-      <div className="mx-auto flex w-full max-w-6xl items-center justify-between gap-4 px-4 py-3 md:px-6">
-        <Link href="/" className="flex items-center gap-2 text-lg font-semibold text-slate-900">
-          <span className="inline-flex h-9 w-9 items-center justify-center rounded-full bg-blue-600 font-bold text-white">II</span>
-          <span className="hidden sm:inline">India Inflation</span>
+      <div className="mx-auto flex w-full max-w-6xl items-center justify-between gap-4 px-4 py-3 text-slate-100 md:px-6">
+        <Link href="/" className="flex items-center gap-2 text-lg font-semibold text-slate-100">
+          <span className="inline-flex h-9 w-9 items-center justify-center rounded-full bg-gradient-to-br from-blue-500 to-indigo-500 font-bold text-white shadow-lg">
+            II
+          </span>
+          <span className="hidden font-display text-[1.05rem] tracking-tight sm:inline">Indiainflation</span>
         </Link>
 
         <nav className="hidden items-center gap-1 md:flex">
@@ -54,7 +56,9 @@ export function SiteHeader(): ReactElement {
                 href={link.href}
                 className={cn(
                   "rounded-full px-4 py-2 text-sm font-medium transition",
-                  isActive ? "bg-blue-600 text-white shadow" : "text-slate-600 hover:bg-slate-100"
+                  isActive
+                    ? "bg-gradient-to-r from-blue-500 to-indigo-500 text-white shadow-md"
+                    : "text-slate-300 hover:bg-slate-800/60 hover:text-white"
                 )}
               >
                 {link.label}
@@ -72,7 +76,7 @@ export function SiteHeader(): ReactElement {
             type="button"
             variant="outline"
             size="sm"
-            className="lg:hidden"
+            className="border-slate-700/60 text-slate-100 hover:border-blue-400 hover:bg-slate-800/70 lg:hidden"
             onClick={() => setMobileOpen((value) => !value)}
             aria-expanded={mobileOpen}
             aria-label="Toggle navigation"
@@ -82,16 +86,11 @@ export function SiteHeader(): ReactElement {
         </div>
       </div>
 
-      <div
-        className={cn(
-          "lg:hidden",
-          mobileOpen ? "block" : "hidden"
-        )}
-      >
-        <div className="border-t border-slate-200 px-4 py-4">
+      <div className={cn("lg:hidden", mobileOpen ? "block" : "hidden")}>
+        <div className="border-t border-slate-800/60 bg-slate-950/90 px-4 py-4">
           <SearchBar />
         </div>
-        <nav className="space-y-1 border-t border-slate-200 px-4 py-4">
+        <nav className="space-y-1 border-t border-slate-800/60 bg-slate-950/95 px-4 py-4">
           {NAV_LINKS.map((link) => {
             const isActive = link.href === "/" ? activePath === "/" : activePath.startsWith(link.href);
             return (
@@ -100,7 +99,7 @@ export function SiteHeader(): ReactElement {
                 href={link.href}
                 className={cn(
                   "block rounded-xl px-4 py-3 text-base font-medium transition",
-                  isActive ? "bg-blue-50 text-blue-700" : "text-slate-700 hover:bg-slate-100"
+                  isActive ? "bg-gradient-to-r from-blue-500/90 to-indigo-500/90 text-white shadow" : "text-slate-200 hover:bg-slate-800"
                 )}
               >
                 {link.label}

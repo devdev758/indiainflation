@@ -11,13 +11,10 @@ if [[ -z "${SSH_KEY_PATH:-}" ]]; then
   exit 1
 fi
 
-WEB_IMAGE="${WEB_IMAGE:-ghcr.io/example/indiainflation-web:latest}"
-ETL_IMAGE="${ETL_IMAGE:-ghcr.io/example/indiainflation-etl:latest}"
-
 ssh -i "$SSH_KEY_PATH" -o StrictHostKeyChecking=no "$HETZNER_HOST" <<EOF
 set -e
-docker pull "$WEB_IMAGE"
-docker pull "$ETL_IMAGE"
-docker compose -f /opt/indiainflation/docker-compose.yml down
-WEB_IMAGE="$WEB_IMAGE" ETL_IMAGE="$ETL_IMAGE" docker compose -f /opt/indiainflation/docker-compose.yml up -d
+cd /opt/indiainflation
+docker compose -f infra/docker-compose.prod.yml pull || true
+docker compose -f infra/docker-compose.prod.yml down
+docker compose -f infra/docker-compose.prod.yml up -d --build
 EOF

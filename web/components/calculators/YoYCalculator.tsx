@@ -3,6 +3,7 @@
 import { useMemo, useState, type ReactElement } from "react";
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { DATASET_LOOKUP, YOY_SLUGS } from "@/lib/data/catalog";
 import { useItemExports } from "@/lib/client/useItemExports";
 
 type ItemOption = {
@@ -10,10 +11,7 @@ type ItemOption = {
   value: string;
 };
 
-const ITEM_OPTIONS: ItemOption[] = [
-  { label: "Milk", value: "milk" },
-  { label: "Rice", value: "rice" }
-];
+const ITEM_OPTIONS: ItemOption[] = YOY_SLUGS.map((slug) => ({ label: DATASET_LOOKUP[slug]?.title ?? slug, value: slug }));
 
 type SeriesEntry = { date: string; index?: number; index_value?: number; value?: number };
 
@@ -43,7 +41,7 @@ function subtractMonths(isoMonth: string, months: number): string {
 }
 
 export function YoYCalculator(): ReactElement {
-  const [item, setItem] = useState<string>(ITEM_OPTIONS[0]?.value ?? "milk");
+  const [item, setItem] = useState<string>(ITEM_OPTIONS[0]?.value ?? "cpi-all-items");
   const [selectedMonth, setSelectedMonth] = useState<string | null>(null);
 
   const slugList = useMemo(() => [item], [item]);

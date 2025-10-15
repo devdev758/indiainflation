@@ -32,6 +32,14 @@ class ExportTarget:
     kind: str  # "item" or "region"
 
 
+@dataclass
+class RegionSeries:
+    code: str
+    name: str
+    type: str
+    rows: List[Tuple[date, Decimal]]
+
+
 def month_delta(start: date, end: date) -> int:
     return (end.year - start.year) * 12 + (end.month - start.month)
 
@@ -135,15 +143,19 @@ def fetch_item_series(conn, slug: str, since: Optional[date]):
         select(
             items_table.c.id,
             items_table.c.canonical_name,
+            regions_table.c.code,
+            regions_table.c.name,
+            regions_table.c.type,
             series_table.c.date,
             series_table.c.index_value,
         )
         .join(series_table, series_table.c.item_id == items_table.c.id)
+        .join(regions_table, regions_table.c.id == series_table.c.region_id)
         .where(items_table.c.slug == slug)
     )
     if since is not None:
         stmt = stmt.where(series_table.c.date >= since)
-    stmt = stmt.order_by(series_table.c.date)
+    stmt = stmt.order_by(regions_table.c.code, series_table.c.date)
 
     rows = conn.execute(stmt).fetchall()
     if not rows:
@@ -151,8 +163,26 @@ def fetch_item_series(conn, slug: str, since: Optional[date]):
 
     item_id = rows[0][0]
     name = rows[0][1]
-    series_rows = [(row[2], Decimal(str(row[3]))) for row in rows]
-    return item_id, name, series_rows
+    region_series: Dict[str, RegionSeries] = {}
+
+    for row in rows:
+        region_code = row[2]
+        region_name = row[3]
+        region_type = row[4]
+        point_date = row[5]
+        value = Decimal(str(row[6]))
+        bucket = region_series.get(region_code)
+        if bucket is None:
+            bucket = RegionSeries(code=region_code, name=region_name, type=region_type, rows=[])
+            region_series[region_code] = bucket
+        bucket.rows.append((point_date, value))
+
+    default_region_code = next(
+        (code for code, data in region_series.items() if data.type == "nation"),
+        next(iter(region_series)),
+    )
+
+    return item_id, name, default_region_code, region_series
 
 
 def fetch_region_series(conn, code: str, since: Optional[date]):
@@ -194,7 +224,57 @@ def parse_since(value: Optional[str]) -> Optional[date]:
         raise click.BadParameter("Expected YYYY-MM format for --since") from exc
 
 
-def build_payload(slug: str, name: str, series_rows: List[Tuple[date, Decimal]]) -> dict:
+def build_item_payload(
+    slug: str,
+    name: str,
+    default_region_code: str,
+    region_series_map: Dict[str, RegionSeries],
+) -> dict:
+    ordered_regions = sorted(region_series_map.values(), key=lambda entry: entry.code)
+    regional_payloads: List[dict] = []
+    default_series: List[dict] = []
+    default_metadata: dict = {}
+
+    for region in ordered_regions:
+        entries, metadata = compute_series_metrics(region.rows)
+        regional_payloads.append(
+            {
+                "code": region.code,
+                "name": region.name,
+                "type": region.type,
+                "series": entries,
+                "metadata": metadata,
+            }
+        )
+        if region.code == default_region_code:
+            default_series = entries
+            default_metadata = metadata
+
+    if not default_series and ordered_regions:
+        fallback_region = ordered_regions[0]
+        entries, metadata = compute_series_metrics(fallback_region.rows)
+        default_region_code = fallback_region.code
+        default_series = entries
+        default_metadata = metadata
+
+    payload = {
+        "slug": slug,
+        "name": name,
+        "default_region": default_region_code,
+        "metadata": default_metadata,
+        "series": default_series,
+        "regions": [
+            {"code": region.code, "name": region.name, "type": region.type}
+            for region in ordered_regions
+        ],
+        "regional_series": regional_payloads,
+        "generated_at": datetime.utcnow().isoformat(),
+        "export_schema_version": "v2",
+    }
+    return payload
+
+
+def build_region_payload(slug: str, name: str, series_rows: List[Tuple[date, Decimal]]) -> dict:
     series_entries, metadata = compute_series_metrics(series_rows)
     payload = {
         "slug": slug,
@@ -202,6 +282,7 @@ def build_payload(slug: str, name: str, series_rows: List[Tuple[date, Decimal]])
         "metadata": metadata,
         "series": series_entries,
         "generated_at": datetime.utcnow().isoformat(),
+        "export_schema_version": "v2",
     }
     return payload
 
@@ -220,8 +301,8 @@ def export_target(
         if not result:
             logger.warning("No data found for item %s", target.slug)
             return None
-        _, name, rows = result
-        payload = build_payload(target.slug, name, rows)
+        _, name, default_region_code, region_map = result
+        payload = build_item_payload(target.slug, name, default_region_code, region_map)
         local_path = output_dir / "items" / f"{target.slug}.json.gz"
         s3_key = f"exports/items/{target.slug}.json.gz"
     else:
@@ -230,7 +311,7 @@ def export_target(
             logger.warning("No data found for region %s", target.slug)
             return None
         _, name, rows = result
-        payload = build_payload(target.slug, name, rows)
+        payload = build_region_payload(target.slug, name, rows)
         local_path = output_dir / "regions" / f"{target.slug}.json.gz"
         s3_key = f"exports/regions/{target.slug}.json.gz"
 

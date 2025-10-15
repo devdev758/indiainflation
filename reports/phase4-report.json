@@ -1,0 +1,108 @@
+{
+  "generatedAt": "2025-10-15T07:44:40.113Z",
+  "stagingBase": "http://188.245.150.69",
+  "ga4": {
+    "integrated": true,
+    "measurementIdPresent": true,
+    "siteVerificationPresent": true
+  },
+  "datasets": {
+    "totalTracked": 5,
+    "overHundredObservations": 5,
+    "regionalCoverageOk": true,
+    "missingDatasets": [],
+    "items": [
+      {
+        "slug": "cpi-all-items",
+        "name": "CPI All Items",
+        "observations": 240,
+        "latestMonth": "2025-12-01",
+        "regionCount": 5,
+        "defaultRegion": "all-india"
+      },
+      {
+        "slug": "cpi-food-and-beverages",
+        "name": "CPI Food & Beverages",
+        "observations": 240,
+        "latestMonth": "2025-12-01",
+        "regionCount": 5,
+        "defaultRegion": "all-india"
+      },
+      {
+        "slug": "cpi-fuel-and-light",
+        "name": "CPI Fuel & Light",
+        "observations": 240,
+        "latestMonth": "2025-12-01",
+        "regionCount": 5,
+        "defaultRegion": "all-india"
+      },
+      {
+        "slug": "wpi-all-commodities",
+        "name": "WPI All Commodities",
+        "observations": 240,
+        "latestMonth": "2025-12-01",
+        "regionCount": 5,
+        "defaultRegion": "all-india"
+      },
+      {
+        "slug": "imf-cpi-all-items",
+        "name": "IMF CPI All Items",
+        "observations": 240,
+        "latestMonth": "2025-12-01",
+        "regionCount": 5,
+        "defaultRegion": "all-india"
+      }
+    ]
+  },
+  "routes": [
+    {
+      "route": "/",
+      "status": 200,
+      "ok": true,
+      "structuredDataCount": 1,
+      "errors": []
+    },
+    {
+      "route": "/cpi-dashboard",
+      "status": 200,
+      "ok": true,
+      "structuredDataCount": 1,
+      "errors": []
+    },
+    {
+      "route": "/compare",
+      "status": 200,
+      "ok": true,
+      "structuredDataCount": 1,
+      "errors": []
+    },
+    {
+      "route": "/datasets",
+      "status": 200,
+      "ok": true,
+      "structuredDataCount": 1,
+      "errors": []
+    },
+    {
+      "route": "/calculators",
+      "status": 200,
+      "ok": true,
+      "structuredDataCount": 1,
+      "errors": []
+    },
+    {
+      "route": "/inflation-history",
+      "status": 200,
+      "ok": true,
+      "structuredDataCount": 1,
+      "errors": []
+    },
+    {
+      "route": "/articles",
+      "status": 200,
+      "ok": true,
+      "structuredDataCount": 1,
+      "errors": []
+    }
+  ]
+}

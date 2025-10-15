@@ -1,0 +1,17 @@
+{
+  "series": [
+    {
+      "item": "IMF CPI All Items",
+      "country": "India",
+      "year": 2024,
+      "month": "Feb",
+      "value": 170.5
+    },
+    {
+      "indicator": "IMF CPI All Items",
+      "region": "All India",
+      "date": "2024-03-01",
+      "value": "171.2"
+    }
+  ]
+}

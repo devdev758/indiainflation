@@ -1,0 +1,2 @@
+# Nightly database backup at 03:30 server time
+30 3 * * * /usr/bin/env bash -lc 'cd "$PHASE4_INFRA_ROOT" && docker compose -f infra/docker-compose.prod.yml run --rm backups'

@@ -155,7 +155,7 @@ export default function SearchBar(): ReactElement {
           value={query}
           onChange={handleChange}
           onKeyDown={handleKeyDown}
-          placeholder="Search items, e.g. milk, rice"
+          placeholder="Search items, e.g. CPI all items, WPI"
           className="w-full bg-transparent text-slate-800 placeholder:text-slate-400 focus:outline-none"
           role="combobox"
           aria-autocomplete="list"

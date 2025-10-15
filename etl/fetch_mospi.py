@@ -9,7 +9,7 @@ import uuid
 from datetime import datetime, timezone
 from decimal import Decimal
 from pathlib import Path
-from typing import Dict, List
+from typing import Dict, Iterable, List, Optional
 
 import click
 import pandas as pd
@@ -265,12 +265,28 @@ class DimensionManager:
         )
         record["aliases"] = updated_aliases
         self._register_item_alias(record, alias)
-
-    def ensure_item(self, alias: str) -> int:
+    def ensure_item(
+        self,
+        alias: str,
+        *,
+        slug: Optional[str] = None,
+        canonical_name: Optional[str] = None,
+        extra_aliases: Optional[Iterable[str]] = None,
+    ) -> int:
         token = _normalize_alias(alias)
         record = self.item_alias_index.get(token)
         if record:
             self._append_item_alias_if_needed(record, alias)
+            if canonical_name and record["canonical_name"] != canonical_name:
+                self.conn.execute(
+                    update(items_table)
+                    .where(items_table.c.id == record["id"])
+                    .values(canonical_name=canonical_name)
+                )
+                record["canonical_name"] = canonical_name
+            if extra_aliases:
+                for extra in extra_aliases:
+                    self._append_item_alias_if_needed(record, extra)
             return record["id"]
 
         slug_candidate = slugify(alias)
@@ -278,46 +294,99 @@ class DimensionManager:
         record = self.item_alias_index.get(token_from_slug)
         if record:
             self._append_item_alias_if_needed(record, alias)
+            if canonical_name and record["canonical_name"] != canonical_name:
+                self.conn.execute(
+                    update(items_table)
+                    .where(items_table.c.id == record["id"])
+                    .values(canonical_name=canonical_name)
+                )
+                record["canonical_name"] = canonical_name
+            if extra_aliases:
+                for extra in extra_aliases:
+                    self._append_item_alias_if_needed(record, extra)
             return record["id"]
 
-        slug = self._unique_item_slug(slug_candidate)
+        slug_value = slug or slug_candidate
+        slug_value = self._unique_item_slug(slug_value)
+        canonical = canonical_name or alias
+        alias_pool = {alias, canonical}
+        if extra_aliases:
+            alias_pool.update(extra_aliases)
+        alias_collection = sorted(alias_pool)
         result = self.conn.execute(
             items_table.insert()
-            .values(slug=slug, canonical_name=alias, aliases=[alias])
+            .values(slug=slug_value, canonical_name=canonical, aliases=alias_collection)
             .returning(items_table.c.id)
         )
         item_id = result.scalar_one()
         record = {
             "id": item_id,
-            "slug": slug,
-            "canonical_name": alias,
-            "aliases": [alias],
+            "slug": slug_value,
+            "canonical_name": canonical,
+            "aliases": alias_collection,
         }
         self.items[item_id] = record
-        self.slug_index[slug] = record
-        self._register_item_alias(record, slug)
-        self._register_item_alias(record, alias)
+        self.slug_index[slug_value] = record
+        for alias_value in alias_collection:
+            self._register_item_alias(record, alias_value)
         return item_id
 
-    def ensure_region(self, alias: str) -> int:
+    def ensure_region(
+        self,
+        alias: str,
+        *,
+        code: Optional[str] = None,
+        region_type: Optional[str] = None,
+        extra_aliases: Optional[Iterable[str]] = None,
+    ) -> int:
         token = _normalize_alias(alias)
         record = self.region_alias_index.get(token)
         if record:
+            updates: Dict[str, str] = {}
+            if region_type and record["type"] != region_type:
+                updates["type"] = region_type
+            old_code = record.get("code")
+            if code and record.get("code") != code:
+                updates["code"] = code
+            if updates:
+                self.conn.execute(
+                    update(regions_table)
+                    .where(regions_table.c.id == record["id"])
+                    .values(**updates)
+                )
+                record.update(updates)
+                if "code" in updates:
+                    if old_code and old_code in self.region_code_index:
+                        self.region_code_index.pop(old_code, None)
+                    self.region_code_index[record["code"]] = record
+                    self._register_region_alias(record, record["code"])
+            if extra_aliases:
+                for extra in extra_aliases:
+                    self._register_region_alias(record, extra)
             return record["id"]
 
         code_candidate = slugify(alias)
-        code = self._unique_region_code(code_candidate)
+        selected_code = code or self._unique_region_code(code_candidate)
+        region_kind = region_type or "unknown"
         result = self.conn.execute(
             regions_table.insert()
-            .values(code=code, name=alias, type="unknown")
+            .values(code=selected_code, name=alias, type=region_kind)
             .returning(regions_table.c.id)
         )
         region_id = result.scalar_one()
-        record = {"id": region_id, "code": code, "name": alias, "type": "unknown"}
+        record = {
+            "id": region_id,
+            "code": selected_code,
+            "name": alias,
+            "type": region_kind,
+        }
         self.regions[region_id] = record
-        self.region_code_index[code] = record
-        self._register_region_alias(record, code)
+        self.region_code_index[selected_code] = record
+        self._register_region_alias(record, selected_code)
         self._register_region_alias(record, alias)
+        if extra_aliases:
+            for extra in extra_aliases:
+                self._register_region_alias(record, extra)
         return region_id
 
 
@@ -369,6 +438,7 @@ def ingest_with_engine(engine, file_path: Path, rows: List[dict], checksum: str,
                             "year": row["year"],
                             "month": row["month"],
                             "raw_value": Decimal(str(row["index_value"])),
+                            "source": row.get("source", "mospi"),
                         }
                         for row in rows
                     ]
@@ -376,8 +446,18 @@ def ingest_with_engine(engine, file_path: Path, rows: List[dict], checksum: str,
 
                     dimensions = DimensionManager(conn)
                     for row in rows:
-                        item_id = dimensions.ensure_item(row["item_alias"])
-                        region_id = dimensions.ensure_region(row["region_alias"])
+                        item_id = dimensions.ensure_item(
+                            row["item_alias"],
+                            slug=row.get("item_slug"),
+                            canonical_name=row.get("item_canonical_name"),
+                            extra_aliases=row.get("item_aliases"),
+                        )
+                        region_id = dimensions.ensure_region(
+                            row["region_alias"],
+                            code=row.get("region_code"),
+                            region_type=row.get("region_type"),
+                            extra_aliases=row.get("region_aliases"),
+                        )
                         date_value = datetime(row["year"], row["month"], 1).date()
                         value = Decimal(str(row["index_value"]))
                         conn.execute(
