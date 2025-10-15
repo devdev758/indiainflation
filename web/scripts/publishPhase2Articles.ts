@@ -1,33 +1,7 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
 /// <reference types="node" />
 
-type ArticleDefinition = {
-  title: string;
-  slug: string;
-  excerpt: string;
-  content: string;
-};
-
-type ArticleResult = {
-  title: string;
-  slug: string;
-  url?: string;
-  id?: number;
-};
-
-type Summary = {
-  total: number;
-  created: ArticleResult[];
-  updated: ArticleResult[];
-  skipped: ArticleResult[];
-  failed: Array<{ title: string; slug: string; error: string }>;
-};
-
-type WordPressPost = {
-  id: number;
-  link?: string;
-  content?: { raw?: string };
-};
+import { ArticleDefinition, ArticlePublishSummary, ArticleResult, WordPressPost } from "../types/articleTypes";
 
 const articles: ArticleDefinition[] = [
   {
@@ -281,7 +255,7 @@ async function main() {
   const appPassword = requireEnv("INDIAINFLATION_WP_APP_PASSWORD", "WP_APP_PASSWORD");
   const authHeader = `Basic ${Buffer.from(`${user}:${appPassword}`).toString("base64")}`;
 
-  const summary: Summary = {
+  const summary: ArticlePublishSummary = {
     total: 0,
     created: [],
     updated: [],
