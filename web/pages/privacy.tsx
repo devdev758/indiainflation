@@ -1,6 +1,8 @@
 import Head from "next/head";
 import type { ReactElement } from "react";
 
+import { safeFormatDate } from "@/lib/utils/date";
+
 export default function PrivacyPolicyPage(): ReactElement {
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "https://indiainflation.in";
   const structuredData = {
@@ -20,7 +22,7 @@ export default function PrivacyPolicyPage(): ReactElement {
       </Head>
       <article className="prose max-w-none prose-headings:text-slate-900 prose-p:text-slate-700">
         <h1>Privacy policy</h1>
-        <p>Last updated: {new Date().toLocaleDateString()}</p>
+        <p>Last updated: {safeFormatDate(new Date(), { year: "numeric", month: "short", day: "numeric" })}</p>
         <h2>Data collection</h2>
         <p>
           We collect aggregated analytics to understand how visitors interact with calculators and articles. No personal

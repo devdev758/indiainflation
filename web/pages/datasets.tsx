@@ -5,6 +5,7 @@ import type { GetStaticProps, InferGetStaticPropsType } from "next";
 import { DATASET_CATALOG, DATASET_DEFINITIONS } from "@/lib/data/catalog";
 import { loadPhase3Items, type Phase3ItemDataset } from "@/lib/data/phase3";
 import { getRegionSeries } from "@/lib/data/phase3Shared";
+import { safeFormatDate } from "@/lib/utils/date";
 
 interface DatasetSummary {
   slug: string;
@@ -97,7 +98,11 @@ export default function DatasetsPage({ datasets, generatedAt }: InferGetStaticPr
         <div className="mt-8 grid gap-4 text-sm md:grid-cols-3">
           <HeroMetric title="Total datasets" value={datasets.length.toString()} caption="CPI, WPI, IMF" />
           <HeroMetric title="Regions covered" value={datasets.reduce((sum, dataset) => sum + dataset.regions, 0).toString()} caption="Nation + states" />
-          <HeroMetric title="Latest refresh" value={new Date(generatedAt).toLocaleDateString("en-IN")} caption="ETL automation" />
+          <HeroMetric
+            title="Latest refresh"
+            value={safeFormatDate(generatedAt, { year: "numeric", month: "short", day: "numeric" })}
+            caption="ETL automation"
+          />
         </div>
       </section>
 
@@ -126,7 +131,9 @@ export default function DatasetsPage({ datasets, generatedAt }: InferGetStaticPr
                   </div>
                   <div className="col-span-2">
                     <dt>Latest month</dt>
-                    <dd className="font-semibold text-slate-900">{dataset.lastDate ?? "--"}</dd>
+                    <dd className="font-semibold text-slate-900">
+                      {safeFormatDate(dataset.lastDate, { month: "short", year: "numeric" })}
+                    </dd>
                   </div>
                 </dl>
                 <div className="mt-5 flex flex-wrap gap-3 text-sm">

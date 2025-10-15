@@ -4,6 +4,7 @@ import Link from "next/link";
 
 import ItemChart from "@/components/ItemChart";
 import { ItemExportData, loadSampleOnly } from "@/lib/exportLoader";
+import { safeFormatDate } from "@/lib/utils/date";
 
 type ItemPageProps = {
   exportData: ItemExportData;
@@ -11,11 +12,6 @@ type ItemPageProps = {
 
 const numberFormatter = new Intl.NumberFormat("en-IN", {
   maximumFractionDigits: 2
-});
-
-const dateFormatter = new Intl.DateTimeFormat("en-IN", {
-  year: "numeric",
-  month: "short"
 });
 
 const FALLBACK_API_BASE = "http://127.0.0.1:3000";
@@ -75,11 +71,11 @@ const ItemPage: NextPage<ItemPageProps> = ({ exportData }) => {
   const metadataCards = [
     {
       label: "First observation",
-      value: safeMetadata.first_date ? dateFormatter.format(new Date(safeMetadata.first_date)) : "—"
+      value: safeFormatDate(safeMetadata.first_date, { month: "short", year: "numeric" })
     },
     {
       label: "Latest observation",
-      value: safeMetadata.last_date ? dateFormatter.format(new Date(safeMetadata.last_date)) : "—"
+      value: safeFormatDate(safeMetadata.last_date, { month: "short", year: "numeric" })
     },
     { label: "Points", value: (safeMetadata.count ?? 0).toString() },
     {

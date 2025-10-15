@@ -6,6 +6,7 @@ import type { GetStaticPaths, GetStaticProps, InferGetStaticPropsType } from "ne
 import { ArticleCard } from "@/components/articles/ArticleCard";
 import { ShareButtons } from "@/components/articles/ShareButtons";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { safeFormatDate } from "@/lib/utils/date";
 import { fetchPostBySlug, fetchPosts, fetchRelatedPosts, type PostDetail, type PostSummary } from "@/lib/wpClient";
 
 type Props = {
@@ -95,13 +96,7 @@ export default function BlogPostPage({ post, related }: InferGetStaticPropsType<
         <h1 className="text-4xl font-bold leading-tight text-slate-900 md:text-5xl">{post.title}</h1>
         <div className="flex flex-wrap items-center gap-3 text-sm text-slate-500">
           {post.author && <span>By {post.author}</span>}
-          <span>
-            {new Date(post.date).toLocaleDateString(undefined, {
-              year: "numeric",
-              month: "long",
-              day: "numeric"
-            })}
-          </span>
+          <span>{safeFormatDate(post.date, { year: "numeric", month: "long", day: "numeric" })}</span>
           <span>· {post.readingTimeMinutes} min read</span>
         </div>
         <ShareButtons title={post.title} url={shareUrl} />

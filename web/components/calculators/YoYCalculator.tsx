@@ -5,6 +5,7 @@ import { useMemo, useState, type ReactElement } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { DATASET_LOOKUP, YOY_SLUGS } from "@/lib/data/catalog";
 import { useItemExports } from "@/lib/client/useItemExports";
+import { safeFormatDate } from "@/lib/utils/date";
 
 type ItemOption = {
   label: string;
@@ -62,7 +63,13 @@ export function YoYCalculator(): ReactElement {
     return computeYoY(series, selectedMonth);
   }, [series, selectedMonth]);
 
-  const formatter = new Intl.DateTimeFormat("en-IN", { year: "numeric", month: "long" });
+  const formatMonthLabel = (value: string | null) => {
+    if (!value) {
+      return "—";
+    }
+    const formatted = safeFormatDate(`${value}-01`, { year: "numeric", month: "long" });
+    return formatted === "—" ? value : formatted;
+  };
 
   return (
     <Card>
@@ -99,7 +106,7 @@ export function YoYCalculator(): ReactElement {
               </option>
               {monthOptions.map((month) => (
                 <option key={month} value={month}>
-                  {formatter.format(new Date(`${month}-01`))}
+                  {formatMonthLabel(month)}
                 </option>
               ))}
             </select>
@@ -114,7 +121,7 @@ export function YoYCalculator(): ReactElement {
             <p className="mt-2 text-3xl font-semibold">{result.toFixed(2)}%</p>
             {selectedMonth && (
               <p className="mt-1 text-xs text-blue-700">
-                Compared to {formatter.format(new Date(`${subtractMonths(selectedMonth, 12)}-01`))}
+                Compared to {formatMonthLabel(subtractMonths(selectedMonth, 12))}
               </p>
             )}
           </div>

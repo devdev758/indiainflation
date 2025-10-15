@@ -13,6 +13,7 @@ import {
 } from "recharts";
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { safeFormatDate } from "@/lib/utils/date";
 
 type SeriesConfig = {
   key: string;
@@ -37,12 +38,8 @@ type CpiTrendChartProps = {
 };
 
 function formatMonthLabel(value: string): string {
-  try {
-    const parsed = new Date(value);
-    return new Intl.DateTimeFormat("en", { month: "short", year: "2-digit" }).format(parsed);
-  } catch (error) {
-    return value;
-  }
+  const formatted = safeFormatDate(value, { month: "short", year: "2-digit" }, "en");
+  return formatted === "—" ? value : formatted;
 }
 
 export function CpiTrendChart({

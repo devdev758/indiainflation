@@ -2,6 +2,7 @@ import Link from "next/link";
 import type { ReactElement } from "react";
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { safeFormatDate } from "@/lib/utils/date";
 
 export type ArticleCardProps = {
   slug: string;
@@ -14,11 +15,7 @@ export type ArticleCardProps = {
 };
 
 export function ArticleCard({ slug, title, excerpt, date, author, categories }: ArticleCardProps): ReactElement {
-  const formattedDate = new Intl.DateTimeFormat("en-IN", {
-    year: "numeric",
-    month: "long",
-    day: "numeric"
-  }).format(new Date(date));
+  const formattedDate = safeFormatDate(date, { year: "numeric", month: "long", day: "numeric" });
 
   return (
     <Card className="h-full">
