@@ -32,10 +32,11 @@ services:
       - "80:80"
       - "443:443"
     volumes:
-      - ./nginx/production.conf.template:/etc/nginx/templates/default.conf.template:ro
-      - ./nginx/acme:/var/www/certbot
+      - ./infra/nginx/production.conf.template:/etc/nginx/templates/default.conf.template
+      - ./infra/nginx/acme:/var/www/certbot
       - letsencrypt:/etc/letsencrypt
-      - ./dhparam:/etc/ssl/dhparam
+      - ./infra/dhparam:/etc/ssl/dhparam
+      - ./infra/nginx_html:/usr/share/nginx/html:ro
     environment:
       SITE_HOSTNAME: ${SITE_HOSTNAME:?set SITE_HOSTNAME}
       APP_UPSTREAM: ${APP_UPSTREAM:-app:3000}
