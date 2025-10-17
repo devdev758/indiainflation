@@ -3,8 +3,8 @@ version: "3.9"
 services:
   app:
     build:
-      context: ../web
-      dockerfile: Dockerfile
+      context: .
+      dockerfile: ./web/Dockerfile
       args:
         WP_API_BASE: ${WP_API_BASE:?set WP_API_BASE}
         WP_ADMIN_USER: ${WP_ADMIN_USER:-}
