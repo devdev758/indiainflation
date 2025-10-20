@@ -83,8 +83,8 @@ export function SiteFooter(): ReactElement {
         <div className="mx-auto flex max-w-6xl flex-col gap-2 px-4 py-4 text-center text-xs text-slate-500 md:flex-row md:items-center md:justify-between md:px-6">
           <span>© {year} Indiainflation. All rights reserved.</span>
           <div className="flex items-center justify-center gap-4">
-            <Link href="mailto:hello@indiainflation.in" className="transition hover:text-white">
-              hello@indiainflation.in
+            <Link href="mailto:hello@indiainflation.com" className="transition hover:text-white">
+              hello@indiainflation.com
             </Link>
             <Link href="/disclaimer" className="transition hover:text-white">
               Disclaimer

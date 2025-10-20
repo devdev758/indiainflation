@@ -4,7 +4,7 @@ import type { ReactElement } from "react";
 import { safeFormatDate } from "@/lib/utils/date";
 
 export default function PrivacyPolicyPage(): ReactElement {
-  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "https://indiainflation.in";
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "https://indiainflation.com";
   const structuredData = {
     "@context": "https://schema.org",
     "@type": "PrivacyPolicy",
@@ -40,7 +40,7 @@ export default function PrivacyPolicyPage(): ReactElement {
         </p>
         <h2>Questions</h2>
         <p>
-          For privacy-related questions, contact <a href="mailto:privacy@indiainflation.in">privacy@indiainflation.in</a>.
+          For privacy-related questions, contact <a href="mailto:privacy@indiainflation.com">privacy@indiainflation.com</a>.
         </p>
       </article>
     </div>

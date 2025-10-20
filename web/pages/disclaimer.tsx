@@ -2,7 +2,7 @@ import Head from "next/head";
 import type { ReactElement } from "react";
 
 export default function DisclaimerPage(): ReactElement {
-  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "https://indiainflation.in";
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "https://indiainflation.com";
   const structuredData = {
     "@context": "https://schema.org",
     "@type": "WebPage",

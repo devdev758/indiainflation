@@ -15,6 +15,7 @@
     "report:phase4": "npx ts-node --compiler-options '{\"module\":\"commonjs\",\"moduleResolution\":\"node\"}' -r tsconfig-paths/register scripts/generatePhase4Report.ts",
     "screenshots:phase3": "TS_NODE_PROJECT=tsconfig.json npx ts-node scripts/capturePhase3Screens.ts",
     "screenshots:phase4": "npx ts-node --compiler-options '{\"module\":\"commonjs\",\"moduleResolution\":\"node\"}' -r tsconfig-paths/register scripts/capturePhase4Screens.ts",
+    "validate:seo": "npx ts-node --compiler-options '{\"module\":\"commonjs\",\"moduleResolution\":\"node\"}' scripts/validateSeo.ts",
     "seo:validate": "npx ts-node --compiler-options '{\"module\":\"commonjs\",\"moduleResolution\":\"node\"}' -r tsconfig-paths/register scripts/validateStructuredData.ts",
     "sitemap:generate": "npx ts-node --compiler-options '{\"module\":\"commonjs\",\"moduleResolution\":\"node\"}' scripts/generateSitemap.ts",
     "readiness:phase4": "npx ts-node --compiler-options '{\"module\":\"commonjs\",\"moduleResolution\":\"node\"}' -r tsconfig-paths/register scripts/generatePhase4Checklist.ts"
@@ -22,6 +23,8 @@
   "dependencies": {
     "@aws-sdk/client-s3": "^3.667.0",
     "@radix-ui/react-slot": "^1.2.3",
+    "@tanstack/react-query": "^5.59.13",
+    "axios": "^1.7.9",
     "chart.js": "^4.4.6",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",

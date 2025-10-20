@@ -53,7 +53,7 @@ export const getStaticProps: GetStaticProps<Props> = async ({ params }) => {
 };
 
 export default function BlogPostPage({ post, related }: InferGetStaticPropsType<typeof getStaticProps>) {
-  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "https://indiainflation.in";
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "https://indiainflation.com";
   const plainExcerpt = stripHtml(post.excerpt).slice(0, 155);
   const shareUrl = `${siteUrl}/${post.slug}`;
   const articleSchema = {

@@ -35,7 +35,7 @@ export const getStaticProps: GetStaticProps<CalculatorsPageProps> = async () => 
 };
 
 export default function CalculatorsIndex({ items, regions, generatedAt }: InferGetStaticPropsType<typeof getStaticProps>): ReactElement {
-  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "https://indiainflation.in";
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "https://indiainflation.com";
   const canonicalUrl = `${siteUrl.replace(/\/$/, "")}/calculators`;
   const structuredData = {
     "@context": "https://schema.org",
@@ -135,7 +135,7 @@ export default function CalculatorsIndex({ items, regions, generatedAt }: InferG
               Our ETL system exports CPI series across categories, states, and rural/urban splits. Reach out to integrate custom datasets into your dashboards.
             </p>
             <Button asChild>
-              <Link href="mailto:hello@indiainflation.in">Email the data team</Link>
+              <Link href="mailto:hello@indiainflation.com">Email the data team</Link>
             </Button>
           </CardContent>
         </Card>

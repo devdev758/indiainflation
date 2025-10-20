@@ -4,12 +4,12 @@ import path from "node:path";
 const ROUTES = ["/", "/cpi-dashboard", "/compare", "/datasets", "/calculators", "/inflation-history", "/articles"];
 
 function normaliseBase(base: string): string {
-  if (!base) return "https://indiainflation.in";
+  if (!base) return "https://indiainflation.com";
   return base.replace(/\/$/, "");
 }
 
 async function main(): Promise<void> {
-  const base = normaliseBase(process.env.SITE_URL ?? process.env.NEXT_PUBLIC_SITE_URL ?? "https://indiainflation.in");
+  const base = normaliseBase(process.env.SITE_URL ?? process.env.NEXT_PUBLIC_SITE_URL ?? "https://indiainflation.com");
   const now = new Date().toISOString();
 
   const urls = ROUTES.map((route) => {

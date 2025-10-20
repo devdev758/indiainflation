@@ -37,7 +37,7 @@ export const getStaticProps: GetStaticProps = async () => ({
 });
 
 export default function InflationHistoryPage({ generatedAt }: { generatedAt: string }) {
-  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "https://indiainflation.in";
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "https://indiainflation.com";
   const canonicalUrl = `${siteUrl.replace(/\/$/, "")}/inflation-history`;
   const structuredData = {
     "@context": "https://schema.org",

@@ -1,13 +1,17 @@
 import Head from "next/head";
 import type { ReactElement } from "react";
+import { generateOrganizationSchema } from "@/lib/structuredData";
 
 export default function AboutPage(): ReactElement {
-  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "https://indiainflation.in";
-  const structuredData = {
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "https://indiainflation.com";
+  const organizationSchema = generateOrganizationSchema();
+  const pageSchema = {
     "@context": "https://schema.org",
     "@type": "AboutPage",
     headline: "About Indiainflation",
-    url: `${siteUrl}/about`
+    description: "Learn about Indiainflation's mission, data sources, and methodology for tracking India's inflation.",
+    url: `${siteUrl}/about`,
+    publisher: organizationSchema
   };
   return (
     <div className="mx-auto max-w-4xl px-4 pb-20 pt-12 md:px-6">
@@ -19,7 +23,7 @@ export default function AboutPage(): ReactElement {
         />
         <meta property="og:type" content="website" />
         <meta property="og:url" content={`${siteUrl}/about`} />
-        <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(structuredData) }} />
+        <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(pageSchema) }} />
       </Head>
       <article className="prose prose-lg max-w-none prose-headings:text-slate-900 prose-p:text-slate-700">
         <h1>About Indiainflation</h1>

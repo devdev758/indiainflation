@@ -2,7 +2,7 @@ import Head from "next/head";
 import type { ReactElement } from "react";
 
 export default function ContactPage(): ReactElement {
-  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "https://indiainflation.in";
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "https://indiainflation.com";
   const structuredData = {
     "@context": "https://schema.org",
     "@type": "ContactPage",
@@ -23,10 +23,10 @@ export default function ContactPage(): ReactElement {
         <p>We’d love to hear from policymakers, researchers, and households using Indiainflation.</p>
         <h2>Email</h2>
         <p>
-          General queries: <a href="mailto:hello@indiainflation.in">hello@indiainflation.in</a>
+          General queries: <a href="mailto:hello@indiainflation.com">hello@indiainflation.com</a>
         </p>
         <p>
-          Media & partnerships: <a href="mailto:press@indiainflation.in">press@indiainflation.in</a>
+          Media & partnerships: <a href="mailto:press@indiainflation.com">press@indiainflation.com</a>
         </p>
         <h2>Follow along</h2>
         <ul>

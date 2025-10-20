@@ -1,0 +1,106 @@
+openapi: 3.0.3
+info:
+  title: IndiaInflation API
+  version: "1.0.0"
+  description: >-
+    API endpoints serving CPI, WPI, and related inflation metrics for IndiaInflation.com.
+servers:
+  - url: https://indiainflation.com
+    description: Production server
+  - url: https://staging.indiainflation.com
+    description: Staging server
+paths:
+  /api/health:
+    get:
+      summary: Health check
+      responses:
+        "200":
+          description: API availability
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: ok
+  /api/inflation/latest:
+    get:
+      summary: Latest CPI and WPI values with YoY change
+      responses:
+        "200":
+          description: Latest dataset snapshot
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      type: object
+        "404":
+          description: No data available
+  /api/inflation/statewise:
+    get:
+      summary: Latest CPI readings by state and sector
+      responses:
+        "200":
+          description: State-wise CPI metrics
+  /api/inflation/trends:
+    get:
+      summary: CPI and WPI trends for recent months
+      parameters:
+        - in: query
+          name: limit
+          schema:
+            type: integer
+            default: 24
+            minimum: 1
+            maximum: 120
+      responses:
+        "200":
+          description: Trend data
+  /api/inflation/compare:
+    get:
+      summary: Compare CPI and WPI series
+      parameters:
+        - in: query
+          name: sector
+          schema:
+            type: string
+            default: Combined
+        - in: query
+          name: cpi_group
+          schema:
+            type: string
+            default: "All Items"
+        - in: query
+          name: wpi_category
+          schema:
+            type: string
+            default: "All Commodities"
+        - in: query
+          name: months
+          schema:
+            type: integer
+            default: 12
+            minimum: 1
+            maximum: 60
+      responses:
+        "200":
+          description: Comparison data
+        "404":
+          description: No matching records
+  /api/inflation/groups:
+    get:
+      summary: CPI breakdown by major groups
+      parameters:
+        - in: query
+          name: sector
+          schema:
+            type: string
+            default: Combined
+      responses:
+        "200":
+          description: Group-level metrics

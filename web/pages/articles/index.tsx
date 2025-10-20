@@ -31,7 +31,7 @@ export default function ArticlesIndex({ posts }: InferGetStaticPropsType<typeof 
   const categories = Array.from(
     new Map(posts.flatMap((post) => post.categories ?? []).map((category) => [category.id, category])).values()
   ).slice(0, 6);
-  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "https://indiainflation.in";
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "https://indiainflation.com";
   const structuredData = {
     "@context": "https://schema.org",
     "@type": "CollectionPage",
