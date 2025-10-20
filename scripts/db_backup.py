@@ -34,8 +34,8 @@ class DatabaseBackup:
     """Database Backup Manager"""
 
     def __init__(self):
-        self.db_url = os.getenv("DATABASE_URL", "postgresql://localhost/indiainflation")
-        self.backup_dir = os.getenv("BACKUP_DIR", "/backups")
+        self.db_url = os.getenv("DATABASE_URL", "postgresql://postgres:uN5y%23Pq81Lz%404vR@localhost:5432/indiainflation")
+        self.backup_dir = os.getenv("BACKUP_DIR", "/home/deploy/backups")
         self.retention_days = int(os.getenv("BACKUP_RETENTION_DAYS", 30))
 
         # S3 configuration
